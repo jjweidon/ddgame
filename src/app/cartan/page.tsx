@@ -36,6 +36,27 @@ type CartanStats = {
 
 const PLAYERS: PlayerCode[] = ['잡', '큐', '지', '머', '웅'];
 
+type SaveResultRow = {
+  player: PlayerCode;
+  deltaPoints: number;
+  previousPoints: number;
+  newPoints: number;
+  previousRank: number;
+  newRank: number;
+  previousGames: number;
+  newGames: number;
+};
+
+type SaveResultModalData = {
+  year: number;
+  totalGamesBefore: number;
+  totalGamesAfter: number;
+  rankEntries: Array<{ rank: number; players: PlayerCode[] }>;
+  rows: SaveResultRow[];
+};
+
+const formatSignedPoints = (n: number) => (n > 0 ? `+${n}` : `${n}`);
+
 export default function CartanPage() {
   const [selectedPlayers, setSelectedPlayers] = useState<PlayerCode[]>([]);
   const [playerRanks, setPlayerRanks] = useState<Record<PlayerCode, number>>({
@@ -53,6 +74,7 @@ export default function CartanPage() {
   const [editingGameId, setEditingGameId] = useState<string | null>(null);
   const [editingPlayerRanks, setEditingPlayerRanks] = useState<Record<string, number>>({});
   const [historyEditMode, setHistoryEditMode] = useState<boolean>(false);
+  const [saveResultModal, setSaveResultModal] = useState<SaveResultModalData | null>(null);
 
   const selectedCount = selectedPlayers.length;
 
@@ -98,7 +120,7 @@ export default function CartanPage() {
     return koreaTime.getFullYear();
   };
 
-  const fetchCartanData = async () => {
+  const fetchCartanData = async (): Promise<CartanStats | null> => {
     try {
       const year = getCurrentYear();
       const response = await fetch(`/api/cartan?year=${year}`);
@@ -107,9 +129,12 @@ export default function CartanPage() {
         throw new Error(data.error || '카탄 데이터를 불러오지 못했습니다.');
       }
       setGames(data.data.games || []);
-      setStats(data.data.stats || null);
+      const nextStats = (data.data.stats || null) as CartanStats | null;
+      setStats(nextStats);
+      return nextStats;
     } catch (fetchError: any) {
       setError(fetchError.message || '카탄 데이터를 불러오지 못했습니다.');
+      return null;
     }
   };
 
@@ -186,6 +211,14 @@ export default function CartanPage() {
       return;
     }
 
+    const prevStatsSnapshot = stats ? (JSON.parse(JSON.stringify(stats)) as CartanStats) : null;
+    const participants = [...selectedPlayers];
+    const rankEntriesSnapshot = groupedRankEntries.map((e) => ({
+      rank: e.rank,
+      players: [...e.players]
+    }));
+    const year = getCurrentYear();
+
     setLoading(true);
     try {
       const response = await fetch('/api/cartan', {
@@ -199,9 +232,42 @@ export default function CartanPage() {
       if (!response.ok) {
         throw new Error(data.error || '카탄 기록 저장에 실패했습니다.');
       }
-      setSuccess('카탄 기록이 저장되었습니다.');
       resetForm();
-      fetchCartanData();
+      const newStats = await fetchCartanData();
+
+      if (newStats) {
+        const getPlayerRow = (s: CartanStats, p: PlayerCode) =>
+          s.playerStats.find((x) => x.player === p);
+
+        const rows: SaveResultRow[] = participants.map((player) => {
+          const prev = prevStatsSnapshot ? getPlayerRow(prevStatsSnapshot, player) : undefined;
+          const next = getPlayerRow(newStats, player);
+          const previousPoints = prev?.totalPoints ?? 0;
+          const newPoints = next?.totalPoints ?? 0;
+          const previousRank = prev?.rank ?? 5;
+          const newRank = next?.rank ?? 5;
+          return {
+            player,
+            deltaPoints: newPoints - previousPoints,
+            previousPoints,
+            newPoints,
+            previousRank,
+            newRank,
+            previousGames: prev?.totalGames ?? 0,
+            newGames: next?.totalGames ?? 0
+          };
+        });
+
+        setSaveResultModal({
+          year,
+          totalGamesBefore: prevStatsSnapshot?.totalGames ?? 0,
+          totalGamesAfter: newStats.totalGames,
+          rankEntries: rankEntriesSnapshot,
+          rows
+        });
+      } else {
+        setSuccess('카탄 기록이 저장되었습니다.');
+      }
     } catch (submitError: any) {
       setError(submitError.message || '카탄 기록 저장에 실패했습니다.');
     } finally {
@@ -529,6 +595,115 @@ export default function CartanPage() {
         <div className="fixed top-1/2 left-1/2 z-50 w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 animate-fadeIn">
           <div className="rounded-lg border border-emerald-300/70 bg-emerald-100/20 backdrop-blur-sm px-6 py-4 text-center text-sm font-medium text-emerald-400 shadow-lg">
             {success}
+          </div>
+        </div>
+      )}
+
+      {saveResultModal && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 dark:bg-black/70 px-4 py-6 animate-fadeIn"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="cartan-save-result-title"
+          onClick={() => setSaveResultModal(null)}
+        >
+          <div
+            className="bg-surface border border-border rounded-xl shadow-xl max-w-md w-full max-h-[min(90vh,32rem)] overflow-hidden flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-5 pt-5 pb-3 border-b border-border">
+              <h2 id="cartan-save-result-title" className="text-lg font-semibold text-foreground">
+                기록이 반영되었습니다
+              </h2>
+              <p className="text-sm text-muted mt-1">
+                {saveResultModal.year}년 카탄 누적{' '}
+                <span className="font-medium text-foreground">{saveResultModal.totalGamesAfter}</span>
+                경기
+                {saveResultModal.totalGamesBefore !== saveResultModal.totalGamesAfter && (
+                  <span className="text-muted">
+                    {' '}
+                    (이전 {saveResultModal.totalGamesBefore}경기)
+                  </span>
+                )}
+              </p>
+            </div>
+
+            <div className="px-5 py-3 border-b border-border bg-surface-hover/50">
+              <p className="text-xs font-medium text-muted uppercase tracking-wide mb-2">이번 기록</p>
+              <div className="flex flex-wrap gap-2">
+                {saveResultModal.rankEntries
+                  .slice()
+                  .sort((a, b) => a.rank - b.rank)
+                  .map((entry) => (
+                    <span
+                      key={entry.rank}
+                      className={`text-xs font-semibold rounded-md px-2 py-1 border ${getRankBorderColorClass(entry.rank)} bg-surface`}
+                    >
+                      {entry.rank}위: {entry.players.map((p) => getPlayerDisplayName(p)).join(', ')}
+                    </span>
+                  ))}
+              </div>
+            </div>
+
+            <div className="px-5 py-3 overflow-y-auto flex-1 space-y-2">
+              <p className="text-xs font-medium text-muted uppercase tracking-wide">플레이어별 변화</p>
+              {saveResultModal.rows.map((row) => (
+                <div
+                  key={row.player}
+                  className="rounded-lg border border-border bg-surface-hover/40 px-3 py-2.5 space-y-1.5"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-sm font-semibold text-foreground">
+                      {getPlayerDisplayName(row.player)}
+                    </span>
+                    <span
+                      className={`text-sm font-bold tabular-nums ${
+                        row.deltaPoints > 0
+                          ? 'text-emerald-500'
+                          : row.deltaPoints < 0
+                            ? 'text-rose-500'
+                            : 'text-muted'
+                      }`}
+                    >
+                      {formatSignedPoints(row.deltaPoints)}점
+                    </span>
+                  </div>
+                  <div className="text-xs text-muted flex flex-wrap gap-x-3 gap-y-1">
+                    <span>
+                      총점{' '}
+                      <span className="text-foreground font-medium tabular-nums">{row.previousPoints}</span>
+                      {' → '}
+                      <span className="text-foreground font-medium tabular-nums">{row.newPoints}</span>
+                    </span>
+                    <span>
+                      참여{' '}
+                      <span className="text-foreground font-medium tabular-nums">{row.previousGames}</span>
+                      {' → '}
+                      <span className="text-foreground font-medium tabular-nums">{row.newGames}</span>회
+                    </span>
+                  </div>
+                  <div className="text-xs text-muted">
+                    순위{' '}
+                    <span className="text-foreground font-medium">{row.previousRank}위</span>
+                    {' → '}
+                    <span className="text-foreground font-medium">{row.newRank}위</span>
+                    {row.previousRank === row.newRank && (
+                      <span className="text-muted"> (동일)</span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="px-5 py-4 border-t border-border">
+              <button
+                type="button"
+                onClick={() => setSaveResultModal(null)}
+                className="w-full py-2.5 rounded-lg bg-accent-gradient text-white text-sm font-semibold hover:brightness-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2"
+              >
+                확인
+              </button>
+            </div>
           </div>
         </div>
       )}

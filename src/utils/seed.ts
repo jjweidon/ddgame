@@ -2,7 +2,7 @@
 import fetch from 'node-fetch';
 
 // API URL 설정 - 실제 배포된 URL로 변경해야 합니다
-const API_URL = 'http://localhost:3000/api/games'; 
+const API_URL = 'http://localhost:3000/api/sequence/games'; 
 
 // ex.py의 game_logs 데이터를 MongoDB 형식으로 변환
 const gameData = [

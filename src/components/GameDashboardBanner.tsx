@@ -32,6 +32,15 @@ interface GameDashboardBannerProps {
   events?: DashboardEvent[]; // 캐러셀에서 계산된 이벤트를 전달받을 때 사용
 }
 
+const getValidTeamKey = (team?: string[]): string | null => {
+  if (!Array.isArray(team) || team.length !== 2) return null;
+  return getTeamKey(team);
+};
+
+const teamIncludesPlayer = (team: string[] | undefined, player: string): boolean => {
+  return Array.isArray(team) && team.includes(player);
+};
+
 const GameDashboardBanner: React.FC<GameDashboardBannerProps> = ({ games, singleEventIndex, events: providedEvents }) => {
   // 플레이어별 게임 기록 분석
   const analyzePlayerGames = (player: string, allGames: IGame[]) => {
@@ -43,8 +52,8 @@ const GameDashboardBanner: React.FC<GameDashboardBannerProps> = ({ games, single
     const playerGames: Array<{ game: IGame; isWin: boolean }> = [];
     
     sortedGames.forEach(game => {
-      const isWin = game.winningTeam.includes(player);
-      const isLose = game.losingTeam.includes(player);
+      const isWin = teamIncludesPlayer(game.winningTeam, player);
+      const isLose = teamIncludesPlayer(game.losingTeam, player);
       
       if (isWin || isLose) {
         playerGames.push({
@@ -114,8 +123,8 @@ const GameDashboardBanner: React.FC<GameDashboardBannerProps> = ({ games, single
     const teamKey = getTeamKey(team);
     
     sortedGames.forEach(game => {
-      const winningTeamKey = getTeamKey(game.winningTeam);
-      const losingTeamKey = getTeamKey(game.losingTeam);
+      const winningTeamKey = getValidTeamKey(game.winningTeam);
+      const losingTeamKey = getValidTeamKey(game.losingTeam);
       
       if (winningTeamKey === teamKey) {
         teamGames.push({ game, isWin: true });
@@ -307,8 +316,8 @@ export const calculateDashboardEvents = (games: IGame[]): DashboardEvent[] => {
     );
     const playerGames: Array<{ game: IGame; isWin: boolean }> = [];
     sortedGames.forEach(game => {
-      const isWin = game.winningTeam.includes(player);
-      const isLose = game.losingTeam.includes(player);
+      const isWin = teamIncludesPlayer(game.winningTeam, player);
+      const isLose = teamIncludesPlayer(game.losingTeam, player);
       if (isWin || isLose) {
         playerGames.push({ game, isWin });
       }
@@ -358,8 +367,8 @@ export const calculateDashboardEvents = (games: IGame[]): DashboardEvent[] => {
     const teamGames: Array<{ game: IGame; isWin: boolean }> = [];
     const teamKey = getTeamKey(team);
     sortedGames.forEach(game => {
-      const winningTeamKey = getTeamKey(game.winningTeam);
-      const losingTeamKey = getTeamKey(game.losingTeam);
+      const winningTeamKey = getValidTeamKey(game.winningTeam);
+      const losingTeamKey = getValidTeamKey(game.losingTeam);
       if (winningTeamKey === teamKey) {
         teamGames.push({ game, isWin: true });
       } else if (losingTeamKey === teamKey) {
@@ -474,8 +483,10 @@ export const calculateDashboardEvents = (games: IGame[]): DashboardEvent[] => {
   );
   const teamSet = new Set<string>();
   sortedGames.forEach(game => {
-    teamSet.add(getTeamKey(game.winningTeam));
-    teamSet.add(getTeamKey(game.losingTeam));
+    const winningTeamKey = getValidTeamKey(game.winningTeam);
+    const losingTeamKey = getValidTeamKey(game.losingTeam);
+    if (winningTeamKey) teamSet.add(winningTeamKey);
+    if (losingTeamKey) teamSet.add(losingTeamKey);
   });
 
   teamSet.forEach(teamKey => {

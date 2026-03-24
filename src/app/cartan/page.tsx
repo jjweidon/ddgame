@@ -411,7 +411,7 @@ export default function CartanPage() {
               }
               className={`p-2 rounded-md border transition-colors duration-200 ${
                 historyEditMode
-                  ? 'bg-accent-gradient text-white border-transparent shadow-sm'
+                  ? 'bg-accent-gradient text-white border-0 shadow-sm'
                   : 'border-border text-muted hover:text-foreground hover:bg-surface-hover'
               }`}
               title="히스토리 편집"

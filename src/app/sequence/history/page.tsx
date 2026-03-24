@@ -10,6 +10,16 @@ import { IGame } from '@/models/Game';
 import { SortField, SortDirection } from '@/components/GameHistoryList';
 import { getTeamName, getTeamKey } from '@/utils/teamOrder';
 
+const getValidTeamKey = (team?: string[]): string | null => {
+  if (!Array.isArray(team) || team.length !== 2) return null;
+  return getTeamKey(team);
+};
+
+const getValidTeamName = (team?: string[]): string => {
+  if (!Array.isArray(team) || team.length !== 2) return '';
+  return getTeamName(team);
+};
+
 export default function HistoryPage() {
   const [games, setGames] = useState<IGame[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -42,7 +52,7 @@ export default function HistoryPage() {
     setLoading(true);
     try {
       const currentYear = getCurrentYear();
-      const response = await fetch(`/api/games?year=${currentYear}`);
+      const response = await fetch(`/api/sequence/games?year=${currentYear}`);
       const data = await response.json();
       
       if (!response.ok) {
@@ -95,7 +105,7 @@ export default function HistoryPage() {
     try {
       // 선택된 각 게임 ID에 대해 삭제 API 호출
       const deletePromises = selectedGames.map(async (id) => {
-        const response = await fetch(`/api/games/${id}`, {
+        const response = await fetch(`/api/sequence/games/${id}`, {
           method: 'DELETE',
         });
         const data = await response.json();
@@ -150,8 +160,8 @@ export default function HistoryPage() {
     const team2Key = filterTeam2.length === 2 ? getTeamKey(filterTeam2) : null;
     
     return games.filter(game => {
-      const winningTeamKey = getTeamKey(game.winningTeam);
-      const losingTeamKey = getTeamKey(game.losingTeam);
+      const winningTeamKey = getValidTeamKey(game.winningTeam);
+      const losingTeamKey = getValidTeamKey(game.losingTeam);
       
       // 두 팀 모두 선택된 경우: 정확히 해당 조합인 게임만
       if (team1Key && team2Key) {
@@ -190,8 +200,8 @@ export default function HistoryPage() {
     let losses = 0;
     
     getFilteredGames.forEach(game => {
-      const winningTeamKey = getTeamKey(game.winningTeam);
-      const losingTeamKey = getTeamKey(game.losingTeam);
+      const winningTeamKey = getValidTeamKey(game.winningTeam);
+      const losingTeamKey = getValidTeamKey(game.losingTeam);
       
       if (team1Key && team2Key) {
         // 두 팀 모두 선택된 경우
@@ -301,8 +311,9 @@ export default function HistoryPage() {
       
       // 해당 날짜의 게임들을 순회
       gamesInDay.forEach(game => {
-        const winTeam = getTeamName(game.winningTeam);
-        const loseTeam = getTeamName(game.losingTeam);
+        const winTeam = getValidTeamName(game.winningTeam);
+        const loseTeam = getValidTeamName(game.losingTeam);
+        if (!winTeam || !loseTeam) return;
         
         // 정렬 방향에 따라 게임 번호 결정
         const gameNumber = sortDirection === 'asc' 

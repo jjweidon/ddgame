@@ -58,4 +58,4 @@ export async function DELETE(
       { status: 500 }
     );
   }
-} 
+}

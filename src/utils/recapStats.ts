@@ -2,6 +2,11 @@ import { IGame } from '../models/Game';
 import { calculatePlayerStats, calculateTeamStats, getSortedPlayerStats, getSortedTeamStats, calculateWinrate } from './gameStats';
 import { getTeamKey, getTeamName } from './teamOrder';
 
+const getValidTeamKey = (team?: string[]): string | null => {
+  if (!Array.isArray(team) || team.length !== 2) return null;
+  return getTeamKey(team);
+};
+
 // 플레이어별 게임 기록 분석
 export const analyzePlayerGames = (player: string, allGames: IGame[]) => {
   const sortedGames = [...allGames].sort((a, b) => 
@@ -11,8 +16,8 @@ export const analyzePlayerGames = (player: string, allGames: IGame[]) => {
   const playerGames: Array<{ game: IGame; isWin: boolean }> = [];
   
   sortedGames.forEach(game => {
-    const isWin = game.winningTeam.includes(player);
-    const isLose = game.losingTeam.includes(player);
+    const isWin = Array.isArray(game.winningTeam) && game.winningTeam.includes(player);
+    const isLose = Array.isArray(game.losingTeam) && game.losingTeam.includes(player);
     
     if (isWin || isLose) {
       playerGames.push({
@@ -69,8 +74,8 @@ export const analyzeTeamGames = (team: string[], allGames: IGame[]) => {
   const teamKey = getTeamKey(team);
   
   sortedGames.forEach(game => {
-    const winningTeamKey = getTeamKey(game.winningTeam);
-    const losingTeamKey = getTeamKey(game.losingTeam);
+    const winningTeamKey = getValidTeamKey(game.winningTeam);
+    const losingTeamKey = getValidTeamKey(game.losingTeam);
     
     if (winningTeamKey === teamKey) {
       teamGames.push({ game, isWin: true });

@@ -13,7 +13,7 @@ export async function GET(request: Request) {
     const gameType = searchParams.get('gameType') || 'sequence';
     
     // 쿼리 조건 구성
-    let query: any = {};
+    const query: any = {};
     
     if (year) {
       const yearNum = parseInt(year);
@@ -170,4 +170,4 @@ export async function DELETE() {
       { status: 500 }
     );
   }
-} 
+}

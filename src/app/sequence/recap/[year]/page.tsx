@@ -973,7 +973,7 @@ export default function RecapPage() {
     const fetchRecapStats = async () => {
       try {
         setLoading(true);
-        const response = await fetch(`/api/recap/${year}`);
+        const response = await fetch(`/api/sequence/recap/${year}`);
         const data = await response.json();
 
         if (!response.ok) {
@@ -1108,7 +1108,7 @@ export default function RecapPage() {
             document.documentElement.style.position = '';
             document.documentElement.style.width = '';
             
-            setTimeout(() => router.push('/hall-of-fame'), 500);
+            setTimeout(() => router.push('/sequence/hall-of-fame'), 500);
           }
           return 0;
         }
@@ -1380,7 +1380,7 @@ export default function RecapPage() {
           <div className="text-6xl mb-4">⚠️</div>
           <p className="text-white text-xl mb-4">{error || '데이터를 불러올 수 없습니다.'}</p>
           <Link
-            href="/hall-of-fame"
+            href="/sequence/hall-of-fame"
             className="px-6 py-3 bg-white text-purple-900 font-bold rounded-lg hover:bg-gray-100 transition-colors"
           >
             명예의 전당으로 돌아가기
@@ -1446,7 +1446,7 @@ export default function RecapPage() {
           style={{ display: 'none' }}
         >
           <Link
-            href="/hall-of-fame"
+            href="/sequence/hall-of-fame"
             className="px-4 py-2 bg-white/10 backdrop-blur-md text-white rounded-lg hover:bg-white/20 transition-colors flex items-center gap-2 pointer-events-none"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">

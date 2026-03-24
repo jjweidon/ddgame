@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
-import Penalty, { IPenalty } from '@/models/Penalty';
+import Penalty from '@/models/Penalty';
 
 // GET: 모든 패널티 데이터 조회
 export async function GET(request: Request) {
@@ -12,7 +12,7 @@ export async function GET(request: Request) {
     const year = searchParams.get('year');
     
     // 쿼리 조건 구성
-    let query: any = {};
+    const query: any = {};
     
     if (year) {
       const yearNum = parseInt(year);

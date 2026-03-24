@@ -59,7 +59,7 @@ export const useStatsStore = create<StatsStore>((set, get) => ({
       const currentYear = koreaTime.getFullYear();
       
       // 올해 기록만 가져오기
-      const response = await fetch(`/api/stats?year=${currentYear}`);
+      const response = await fetch(`/api/sequence/stats?year=${currentYear}`);
       const data = await response.json();
       
       if (!response.ok) {
@@ -98,7 +98,7 @@ export const useStatsStore = create<StatsStore>((set, get) => ({
     setError(null);
     
     try {
-      let url = '/api/stats';
+      let url = '/api/sequence/stats';
       const params = new URLSearchParams();
       params.append('startDate', startDate);
       params.append('endDate', endDate);
@@ -135,7 +135,7 @@ export const useStatsStore = create<StatsStore>((set, get) => ({
       const currentYear = koreaTime.getFullYear();
       
       // 올해 기록만 가져오기
-      const response = await fetch(`/api/stats?year=${currentYear}`);
+      const response = await fetch(`/api/sequence/stats?year=${currentYear}`);
       const data = await response.json();
       
       if (!response.ok) {

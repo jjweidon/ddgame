@@ -36,7 +36,7 @@ export default function HallOfFamePage() {
   // 사용 가능한 연도 목록 가져오기
   const fetchAvailableYears = async () => {
     try {
-      const response = await fetch('/api/games');
+      const response = await fetch('/api/sequence/games');
       const data = await response.json();
       
       if (!response.ok) {
@@ -77,7 +77,7 @@ export default function HallOfFamePage() {
     setError(null);
     
     try {
-      const response = await fetch(`/api/stats?year=${year}`);
+      const response = await fetch(`/api/sequence/stats?year=${year}`);
       const data = await response.json();
       
       if (!response.ok) {
@@ -96,7 +96,7 @@ export default function HallOfFamePage() {
   // 선택한 연도의 게임 기록 가져오기
   const fetchYearGames = async (year: number) => {
     try {
-      const response = await fetch(`/api/games?year=${year}`);
+      const response = await fetch(`/api/sequence/games?year=${year}`);
       const data = await response.json();
       
       if (!response.ok) {
@@ -136,7 +136,7 @@ export default function HallOfFamePage() {
     try {
       // 선택된 각 게임 ID에 대해 삭제 API 호출
       const deletePromises = selectedGames.map(id => 
-        fetch(`/api/games/${id}`, {
+        fetch(`/api/sequence/games/${id}`, {
           method: 'DELETE',
         })
       );
@@ -270,7 +270,7 @@ export default function HallOfFamePage() {
                       {selectedYear}년 통계
                     </h2>
                     <Link
-                      href={`/recap/${selectedYear}`}
+                      href={`/sequence/recap/${selectedYear}`}
                       className="px-6 py-3 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700
                                text-white font-bold rounded-sm shadow-lg shadow-red-500/30
                                transition-all duration-200 transform hover:scale-[1.02]

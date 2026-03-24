@@ -36,7 +36,7 @@ const PenaltyHistoryModal: React.FC<PenaltyHistoryModalProps> = ({
     setError(null);
     try {
       const currentYear = getCurrentYear();
-      const response = await fetch(`/api/penalties?year=${currentYear}`);
+      const response = await fetch(`/api/sequence/penalties?year=${currentYear}`);
       const data = await response.json();
       
       if (!response.ok) {
@@ -88,7 +88,7 @@ const PenaltyHistoryModal: React.FC<PenaltyHistoryModalProps> = ({
     
     try {
       const deletePromises = selectedPenalties.map(async (id) => {
-        const response = await fetch(`/api/penalties/${id}`, {
+        const response = await fetch(`/api/sequence/penalties/${id}`, {
           method: 'DELETE',
         });
         const data = await response.json();

@@ -29,8 +29,11 @@ export const calculatePlayerStats = (games: IGame[], penalties: IPenalty[] = [])
   
   // 게임 로그를 순회하며 통계 업데이트
   games.forEach(game => {
+    const winningTeam = Array.isArray(game.winningTeam) ? game.winningTeam : [];
+    const losingTeam = Array.isArray(game.losingTeam) ? game.losingTeam : [];
+
     // 승리 팀 통계 업데이트
-    game.winningTeam.forEach(player => {
+    winningTeam.forEach(player => {
       if (playerStats[player]) {
         playerStats[player][0] += 1; // 승리 수 증가
         playerStats[player][1] += 1; // 총 경기 수 증가
@@ -38,7 +41,7 @@ export const calculatePlayerStats = (games: IGame[], penalties: IPenalty[] = [])
     });
     
     // 패배 팀 통계 업데이트
-    game.losingTeam.forEach(player => {
+    losingTeam.forEach(player => {
       if (playerStats[player]) {
         playerStats[player][1] += 1; // 총 경기 수만 증가
       }
@@ -61,8 +64,14 @@ export const calculateTeamStats = (games: IGame[]): TeamStats => {
   
   // 게임 로그를 순회하며 팀 통계 업데이트
   games.forEach(game => {
+    const winningTeam = Array.isArray(game.winningTeam) ? game.winningTeam : null;
+    const losingTeam = Array.isArray(game.losingTeam) ? game.losingTeam : null;
+    if (!winningTeam || winningTeam.length !== 2 || !losingTeam || losingTeam.length !== 2) {
+      return;
+    }
+
     // 승리 팀 통계 업데이트
-    const winTeamKey = getTeamKey(game.winningTeam);
+    const winTeamKey = getTeamKey(winningTeam);
     if (!teamStats[winTeamKey]) {
       teamStats[winTeamKey] = [0, 0];
     }
@@ -70,7 +79,7 @@ export const calculateTeamStats = (games: IGame[]): TeamStats => {
     teamStats[winTeamKey][1] += 1; // 총 경기 수 증가
     
     // 패배 팀 통계 업데이트
-    const loseTeamKey = getTeamKey(game.losingTeam);
+    const loseTeamKey = getTeamKey(losingTeam);
     if (!teamStats[loseTeamKey]) {
       teamStats[loseTeamKey] = [0, 0];
     }

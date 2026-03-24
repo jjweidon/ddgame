@@ -77,7 +77,7 @@ export default function SequencePage() {
     setError(null);
 
     try {
-      const recentGamesResponse = await fetch('/api/games');
+      const recentGamesResponse = await fetch('/api/sequence/games');
       const recentGamesData = await recentGamesResponse.json();
 
       if (recentGamesResponse.ok && recentGamesData.data && recentGamesData.data.length > 0) {
@@ -94,7 +94,7 @@ export default function SequencePage() {
         }
       }
 
-      const response = await fetch('/api/games', {
+      const response = await fetch('/api/sequence/games', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -126,7 +126,7 @@ export default function SequencePage() {
     setError(null);
 
     try {
-      const response = await fetch('/api/penalties', {
+      const response = await fetch('/api/sequence/penalties', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -220,7 +220,7 @@ export default function SequencePage() {
     setBannerLoading(true);
     try {
       const currentYear = getCurrentYear();
-      const response = await fetch(`/api/games?year=${currentYear}`);
+      const response = await fetch(`/api/sequence/games?year=${currentYear}`);
       const data = await response.json();
       if (response.ok && data.data) {
         setGames(data.data);
@@ -374,7 +374,7 @@ export default function SequencePage() {
                     )}
                   </button>
                   <Link
-                    href="/history"
+                    href="/sequence/history"
                     className="flex items-center gap-2 px-4 py-2.5 text-foreground font-medium text-sm hover:bg-surface-hover rounded-lg transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2"
                   >
                     <span>역대 기록</span>
@@ -458,7 +458,7 @@ export default function SequencePage() {
 
       <div className="w-full border-t border-border">
         <Link
-          href="/hall-of-fame"
+          href="/sequence/hall-of-fame"
           className="block w-full px-6 py-4 bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-500 hover:to-orange-600 transition-all duration-200 opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-2"
         >
           <div className="flex items-center justify-center gap-2 text-white font-semibold text-sm">

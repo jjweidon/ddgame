@@ -51,6 +51,9 @@ export async function GET(request: Request) {
         $lte: endDateTime
       };
     }
+
+    // 기존 sequence 통계 하위 호환 (gameType 없는 문서 포함)
+    query.$or = [{ gameType: 'sequence' }, { gameType: { $exists: false } }];
     
     const games = await Game.find(query).sort({ createdAt: -1 });
     

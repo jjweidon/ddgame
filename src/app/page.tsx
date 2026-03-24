@@ -10,9 +10,9 @@ const games = [
   {
     id: 'cartan',
     name: '카탄',
-    description: '준비 중',
-    href: '#',
-    available: false,
+    description: '승률 기록 페이지로 이동',
+    href: '/cartan',
+    available: true,
   },
 ];
 

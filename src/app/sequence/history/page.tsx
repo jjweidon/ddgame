@@ -399,12 +399,12 @@ export default function HistoryPage() {
               </button>
             </div>
             
-            {/* 우측: 홈으로/편집 버튼(좌측 정렬) + 패널티 히스토리 버튼(우측) */}
+            {/* 우측: 이전/편집 버튼(좌측 정렬) + 패널티 히스토리 버튼(우측) */}
             <div className="flex items-center justify-between gap-2 sm:gap-3">
-              {/* 좌측: 홈으로, 편집 버튼 */}
+              {/* 좌측: 이전, 편집 버튼 */}
               <div className="flex items-center gap-1.5 sm:gap-3">
                 <Link 
-                  href="/" 
+                  href="/sequence" 
                   className="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-1.5 sm:py-2.5 text-foreground font-medium text-xs sm:text-sm whitespace-nowrap
                            hover:bg-surface-hover rounded-lg transition-colors duration-200
                            focus:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2"
@@ -412,7 +412,7 @@ export default function HistoryPage() {
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
                     <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
                   </svg>
-                  <span>홈으로</span>
+                  <span>이전</span>
                 </Link>
                 
                 {isEditMode && (

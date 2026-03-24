@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "뚱팸 시퀀스 승률 계산기",
-  description: "뚱팸의 시퀀스 경기 데이터를 관리하고 시각화하는 웹 애플리케이션",
+  title: "뚱팸 승률 기록",
+  description: "뚱팸의 게임별 승률 기록을 관리하는 웹 애플리케이션",
 };
 
 export default function RootLayout({

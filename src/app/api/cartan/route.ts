@@ -16,6 +16,20 @@ type PlayerSummary = {
   rank: number;
 };
 
+const getCartanPointsByContext = (playerCount: number, rank: number): number => {
+  // 요구사항 기반 점수표:
+  // 3인: 1위 3점, 2위 1점, 3위 -1점
+  // 4인: 1위 3점, 2위 1점, 3위 0점, 4위 -1점
+  // 5인: 1위 3점, 2위 1점, 3위 0점, 4위 -1점, 5위 -2점
+  const pointTable: Record<number, Record<number, number>> = {
+    3: { 1: 3, 2: 1, 3: -1 },
+    4: { 1: 3, 2: 1, 3: 0, 4: -1 },
+    5: { 1: 3, 2: 1, 3: 0, 4: -1, 5: -2 }
+  };
+
+  return pointTable[playerCount]?.[rank] ?? 0;
+};
+
 const calculateCartanStats = (games: IGame[]) => {
   const stats: Record<string, { totalPoints: number; totalGames: number; rankCounts: { 1: number; 2: number; 3: number; 4: number; 5: number } }> = {};
 
@@ -29,20 +43,15 @@ const calculateCartanStats = (games: IGame[]) => {
 
   games.forEach((game) => {
     const entries = game.cartanResult?.rankEntries || [];
+    const playerCount = entries.reduce((sum, entry) => sum + (entry.players?.length || 0), 0);
 
     entries.forEach((entry) => {
-      const betterPlayersCount = entries
-        .filter((other) => other.rank < entry.rank)
-        .reduce((sum, other) => sum + (other.players?.length || 0), 0);
-      const effectivePosition = betterPlayersCount + 1;
-      const points = Math.max(1, 6 - effectivePosition);
+      const points = getCartanPointsByContext(playerCount, entry.rank);
 
       entry.players.forEach((player) => {
         if (!stats[player]) return;
         stats[player].totalGames += 1;
         stats[player].totalPoints += points;
-        // 순위 횟수는 사용자가 입력한 등수(entry.rank) 기준으로 집계한다.
-        // 동위 보정 순위(effectivePosition)는 점수 계산에만 사용한다.
         stats[player].rankCounts[entry.rank as 1 | 2 | 3 | 4 | 5] += 1;
       });
     });

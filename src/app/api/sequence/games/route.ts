@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import Game, { VALID_PLAYERS } from '@/models/Game';
+import { validateCartanCompetitionRankEntries } from '@/utils/cartanCompetition';
 
 // GET: 모든 게임 데이터 조회
 export async function GET(request: Request) {
@@ -84,6 +85,11 @@ export async function POST(request: Request) {
             { status: 400 }
           );
         }
+      }
+
+      const competition = validateCartanCompetitionRankEntries(cartanResult.rankEntries);
+      if (!competition.ok) {
+        return NextResponse.json({ success: false, error: competition.error }, { status: 400 });
       }
 
       await dbConnect();

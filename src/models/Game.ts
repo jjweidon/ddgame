@@ -1,4 +1,5 @@
 import mongoose, { Schema } from 'mongoose';
+import { validateCartanCompetitionRankEntries } from '@/utils/cartanCompetition';
 
 export const VALID_PLAYERS = ['잡', '큐', '지', '머', '웅'] as const;
 export type PlayerCode = typeof VALID_PLAYERS[number];
@@ -105,6 +106,11 @@ GameSchema.pre('save', function(next) {
 
     if (Math.min(...rankSet) !== 1) {
       return next(new Error('카탄 등수는 반드시 1위부터 시작해야 합니다.'));
+    }
+
+    const competition = validateCartanCompetitionRankEntries(result.rankEntries);
+    if (!competition.ok) {
+      return next(new Error(competition.error));
     }
 
     return next();

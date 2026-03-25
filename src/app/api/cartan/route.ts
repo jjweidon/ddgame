@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import Game, { IGame, VALID_PLAYERS } from '@/models/Game';
+import { getCartanPointsByContext, validateCartanCompetitionRankEntries } from '@/utils/cartanCompetition';
 
 type PlayerSummary = {
   player: string;
@@ -14,20 +15,6 @@ type PlayerSummary = {
     5: number;
   };
   rank: number;
-};
-
-const getCartanPointsByContext = (playerCount: number, rank: number): number => {
-  // 요구사항 기반 점수표:
-  // 3인: 1위 3점, 2위 1점, 3위 -1점
-  // 4인: 1위 3점, 2위 1점, 3위 0점, 4위 -1점
-  // 5인: 1위 3점, 2위 1점, 3위 0점, 4위 -1점, 5위 -2점
-  const pointTable: Record<number, Record<number, number>> = {
-    3: { 1: 3, 2: 1, 3: -1 },
-    4: { 1: 3, 2: 1, 3: 0, 4: -1 },
-    5: { 1: 3, 2: 1, 3: 0, 4: -1, 5: -2 }
-  };
-
-  return pointTable[playerCount]?.[rank] ?? 0;
 };
 
 const calculateCartanStats = (games: IGame[]) => {
@@ -151,6 +138,11 @@ export async function POST(request: Request) {
           { status: 400 }
         );
       }
+    }
+
+    const competition = validateCartanCompetitionRankEntries(rankEntries);
+    if (!competition.ok) {
+      return NextResponse.json({ success: false, error: competition.error }, { status: 400 });
     }
 
     await dbConnect();

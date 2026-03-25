@@ -3,6 +3,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { getPlayerDisplayName } from '@/utils/playerNames';
+import {
+  getCartanSelectionAllowedRanks,
+  getDefaultRankForNextCartanPlayer,
+  validateCartanCompetitionRankEntries
+} from '@/utils/cartanCompetition';
 
 type PlayerCode = '잡' | '큐' | '지' | '머' | '웅';
 
@@ -90,13 +95,8 @@ export default function CartanPage() {
       .map(([rank, players]) => ({ rank, players }));
   }, [selectedPlayers, playerRanks]);
 
-  const getAvailableRanksForIndex = (index: number): number[] => {
-    if (index <= 0) return [1];
-    const prevPlayer = selectedPlayers[index - 1];
-    const prevRank = playerRanks[prevPlayer];
-    const candidates = [prevRank, Math.min(5, prevRank + 1)];
-    return Array.from(new Set(candidates)).sort((a, b) => a - b);
-  };
+  const getAvailableRanksForIndex = (index: number): number[] =>
+    getCartanSelectionAllowedRanks(selectedPlayers, playerRanks, index);
 
   const getRankTextColorClass = (rank: number): string => {
     if (rank === 1) return 'text-lime-400';
@@ -159,12 +159,7 @@ export default function CartanPage() {
       let changed = false;
 
       selectedPlayers.forEach((player, index) => {
-        const allowed = index === 0 ? [1] : (() => {
-          const prevPlayer = selectedPlayers[index - 1];
-          const prevRank = next[prevPlayer];
-          const candidates = [prevRank, Math.min(5, prevRank + 1)];
-          return Array.from(new Set(candidates)).sort((a, b) => a - b);
-        })();
+        const allowed = getCartanSelectionAllowedRanks(selectedPlayers, next, index);
 
         if (!allowed.includes(next[player])) {
           next[player] = allowed[allowed.length - 1];
@@ -183,10 +178,8 @@ export default function CartanPage() {
       }
       if (prev.length >= 5) return prev;
 
-      // 선택 순서 기반 자동 순위: 직전 플레이어 등수 + 1
-      const prevPlayer = prev[prev.length - 1];
-      const prevRank = prevPlayer ? playerRanks[prevPlayer] : 0;
-      const nextRank = prev.length === 0 ? 1 : Math.min(5, prevRank + 1);
+      // 선택 순서 기반 자동 순위: 경쟁 순위(동점 블록 다음 자리)
+      const nextRank = getDefaultRankForNextCartanPlayer(prev, playerRanks);
       setPlayerRanks((old) => ({ ...old, [player]: nextRank }));
       return [...prev, player];
     });
@@ -208,6 +201,12 @@ export default function CartanPage() {
 
     if (!groupedRankEntries.some((entry) => entry.rank === 1)) {
       setError('반드시 1위를 지정해야 합니다.');
+      return;
+    }
+
+    const competitionCheck = validateCartanCompetitionRankEntries(groupedRankEntries);
+    if (!competitionCheck.ok) {
+      setError(competitionCheck.error);
       return;
     }
 
@@ -306,6 +305,11 @@ export default function CartanPage() {
   const handleSaveEditGame = async (gameId: string) => {
     try {
       const rankEntries = buildRankEntriesFromEditMap();
+      const competitionCheck = validateCartanCompetitionRankEntries(rankEntries);
+      if (!competitionCheck.ok) {
+        setError(competitionCheck.error);
+        return;
+      }
       const response = await fetch(`/api/cartan/${gameId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import mongoose from 'mongoose';
 import dbConnect from '@/lib/mongodb';
 import Game, { VALID_PLAYERS } from '@/models/Game';
+import { validateCartanCompetitionRankEntries } from '@/utils/cartanCompetition';
 
 export async function PATCH(
   request: Request,
@@ -49,6 +50,11 @@ export async function PATCH(
           { status: 400 }
         );
       }
+    }
+
+    const competition = validateCartanCompetitionRankEntries(rankEntries);
+    if (!competition.ok) {
+      return NextResponse.json({ success: false, error: competition.error }, { status: 400 });
     }
 
     const updated = await Game.findOneAndUpdate(

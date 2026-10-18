@@ -6,7 +6,7 @@ import { jsonError } from '@/server/insung/auth';
 
 export const dynamic = 'force-dynamic';
 
-// 작성자별 점수(받은 투표 합) · 멘트 수 · 경쟁 순위 (동점 시 다음 순위 건너뜀)
+// 주인공별 점수(받은 투표 합) · 제보 수 · 경쟁 순위 (동점 시 다음 순위 건너뜀)
 export async function GET() {
   try {
     await dbConnect();

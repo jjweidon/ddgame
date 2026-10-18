@@ -18,7 +18,7 @@ export const dynamic = 'force-dynamic';
 const DEFAULT_LIMIT = 30;
 const MAX_LIMIT = 100;
 
-// 멘트 목록: ?author=&sort=latest|top&limit=&offset=
+// 제보 목록: ?author=&sort=latest|top&limit=&offset=
 export async function GET(request: Request) {
   try {
     await dbConnect();
@@ -28,7 +28,7 @@ export async function GET(request: Request) {
     const limit = Math.min(Math.max(Number(searchParams.get('limit')) || DEFAULT_LIMIT, 1), MAX_LIMIT);
     const offset = Math.max(Number(searchParams.get('offset')) || 0, 0);
 
-    if (author && !isValidPlayer(author)) return jsonError('유효하지 않은 작성자입니다.', 400);
+    if (author && !isValidPlayer(author)) return jsonError('유효하지 않은 주인공입니다.', 400);
 
     const filter = author ? { author } : {};
     const sortSpec: Record<string, 1 | -1> =
@@ -45,14 +45,14 @@ export async function GET(request: Request) {
       data: { quotes: await withVoters(quotes, me), total, hasMore: offset + quotes.length < total }
     });
   } catch (error: any) {
-    console.error('인성 멘트 조회 오류:', error);
-    return jsonError(error.message || '멘트 조회 중 오류가 발생했습니다.', 500);
+    console.error('인성 제보 조회 오류:', error);
+    return jsonError(error.message || '제보 조회 중 오류가 발생했습니다.', 500);
   }
 }
 
 type MergeResult = { status: 'merged' | 'duplicate'; quoteId: string };
 
-/** 같은 작성자+본문 멘트가 있으면 새로 만들지 않고 투표로 병합 */
+/** 같은 주인공+본문 제보가 있으면 새로 만들지 않고 투표로 병합 */
 async function mergeIntoExisting(
   existing: IInsungQuote,
   me: PlayerCode
@@ -63,7 +63,7 @@ async function mergeIntoExisting(
   return { status: voted ? 'merged' : 'duplicate', quoteId };
 }
 
-// 멘트 등록 (+등록자 자동 투표, 중복 병합)
+// 제보 등록 (+등록자 자동 투표, 중복 병합)
 export async function POST(request: Request) {
   try {
     await dbConnect();
@@ -76,19 +76,19 @@ export async function POST(request: Request) {
     const saidAt = typeof body.saidAt === 'string' && body.saidAt ? body.saidAt : undefined;
     const { author } = body;
 
-    if (!content) return jsonError('멘트를 입력하세요.', 400);
+    if (!content) return jsonError('무슨 말이나 행동을 했는지 입력하세요.', 400);
     if (content.length > MAX_CONTENT_LENGTH) {
-      return jsonError(`멘트는 ${MAX_CONTENT_LENGTH}자 이하여야 합니다.`, 400);
+      return jsonError(`본문은 ${MAX_CONTENT_LENGTH}자 이하여야 합니다.`, 400);
     }
-    if (!isValidPlayer(author)) return jsonError('작성자를 선택하세요.', 400);
+    if (!isValidPlayer(author)) return jsonError('누가 했는지 선택하세요.', 400);
     if (context.length > MAX_CONTEXT_LENGTH) {
       return jsonError(`상황 메모는 ${MAX_CONTEXT_LENGTH}자 이하여야 합니다.`, 400);
     }
     if (saidAt !== undefined) {
       if (!/^\d{4}-\d{2}-\d{2}$/.test(saidAt) || Number.isNaN(Date.parse(saidAt))) {
-        return jsonError('발언 날짜 형식이 올바르지 않습니다.', 400);
+        return jsonError('발생 날짜 형식이 올바르지 않습니다.', 400);
       }
-      if (saidAt > getKstToday()) return jsonError('발언 날짜는 미래일 수 없습니다.', 400);
+      if (saidAt > getKstToday()) return jsonError('발생 날짜는 미래일 수 없습니다.', 400);
     }
 
     const normalizedContent = normalizeContent(content);
@@ -109,7 +109,7 @@ export async function POST(request: Request) {
         voteCount: 0
       });
     } catch (error) {
-      // 동시에 같은 멘트가 등록된 경우
+      // 동시에 같은 제보가 등록된 경우
       if (!isDuplicateKeyError(error)) throw error;
       const raced = await InsungQuote.findOne({ normalizedContent, author }).lean<IInsungQuote>();
       if (!raced) throw error;
@@ -124,7 +124,7 @@ export async function POST(request: Request) {
       { status: 201 }
     );
   } catch (error: any) {
-    console.error('인성 멘트 등록 오류:', error);
-    return jsonError(error.message || '멘트 등록 중 오류가 발생했습니다.', 500);
+    console.error('인성 제보 등록 오류:', error);
+    return jsonError(error.message || '제보 등록 중 오류가 발생했습니다.', 500);
   }
 }

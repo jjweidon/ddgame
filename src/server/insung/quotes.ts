@@ -15,7 +15,7 @@ export const getKstToday = () =>
   new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
 
 /**
- * 투표 추가. 본인 멘트 투표는 호출 전에 막을 것.
+ * 투표 추가. 본인이 주인공인 제보 투표는 호출 전에 막을 것.
  * @returns 새로 투표했으면 true, 이미 투표했으면 false
  */
 export async function addVote(quoteId: string, voter: PlayerCode): Promise<boolean> {
@@ -37,7 +37,7 @@ export async function removeVote(quoteId: string, voter: PlayerCode): Promise<bo
   return true;
 }
 
-/** 멘트 목록에 투표자 목록과 내 투표 여부를 붙여서 응답용으로 변환 */
+/** 제보 목록에 투표자 목록과 내 투표 여부를 붙여서 응답용으로 변환 */
 export async function withVoters(quotes: IInsungQuote[], me: PlayerCode | null) {
   const ids = quotes.map((q) => q._id);
   const votes = await InsungVote.find({ quoteId: { $in: ids } })

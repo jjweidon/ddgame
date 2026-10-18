@@ -81,7 +81,7 @@ export default function InsungPage() {
     if (result.ok && result.data) setLeaderboard(result.data);
   }, []);
 
-  // 현재 보기(탭/작성자 필터/정렬)에 맞는 멘트 목록
+  // 현재 보기(탭/주인공 필터/정렬)에 맞는 제보 목록
   const feedQuery = useCallback(
     (offset: number) => {
       const params = new URLSearchParams();
@@ -142,8 +142,8 @@ export default function InsungPage() {
   const handleSubmit = async () => {
     setMessage(null);
     if (!requireLogin()) return;
-    if (!content.trim()) return showError('멘트를 입력하세요.');
-    if (!author) return showError('누가 한 말인지 선택하세요.');
+    if (!content.trim()) return showError('무슨 말이나 행동을 했는지 입력하세요.');
+    if (!author) return showError('누가 했는지 선택하세요.');
 
     setSubmitting(true);
     const result = await api<{ status: 'created' | 'merged' | 'duplicate' }>('/api/insung/quotes', {
@@ -159,9 +159,9 @@ export default function InsungPage() {
 
     const status = result.data.status;
     if (status === 'duplicate') {
-      showSuccess('이미 등록된 멘트예요.');
+      showSuccess('이미 등록된 제보예요.');
     } else {
-      showSuccess(status === 'merged' ? '이미 등록된 멘트라 투표로 반영했어요.' : '인성질 멘트가 등록되었습니다.');
+      showSuccess(status === 'merged' ? '이미 등록된 제보라 투표로 반영했어요.' : '인성질 제보가 등록되었습니다.');
       setContent('');
       setContext('');
       setAuthor(null);
@@ -185,7 +185,7 @@ export default function InsungPage() {
     const isRegistrant = me === quote.registrant;
     let adminPassword: string | undefined;
     if (isRegistrant) {
-      if (!window.confirm('이 멘트를 삭제할까요? 받은 투표도 함께 사라집니다.')) return;
+      if (!window.confirm('이 제보를 삭제할까요? 받은 투표도 함께 사라집니다.')) return;
     } else {
       adminPassword = window.prompt('관리자 비밀번호를 입력하세요.') ?? undefined;
       if (!adminPassword) return;
@@ -195,7 +195,7 @@ export default function InsungPage() {
       body: JSON.stringify({ adminPassword })
     });
     if (!result.ok) return showError(result.error);
-    showSuccess('멘트가 삭제되었습니다.');
+    showSuccess('제보가 삭제되었습니다.');
     refreshAll();
   };
 
@@ -229,7 +229,7 @@ export default function InsungPage() {
         <div className="flex items-center justify-between gap-3">
           <div>
             <h1 className="text-3xl sm:text-4xl font-bold text-foreground tracking-tight">뚱팸 인성질 랭킹</h1>
-            <p className="text-sm text-muted mt-1">카톡에서 나온 인성질 멘트를 박제하고 투표합니다.</p>
+            <p className="text-sm text-muted mt-1">말이든 행동이든, 친구들의 인성질을 제보하고 투표합니다.</p>
           </div>
           <Link
             href="/"
@@ -275,12 +275,12 @@ export default function InsungPage() {
         )}
 
         <section className="bg-surface rounded-lg border border-border p-5 space-y-4">
-          <h2 className="text-xl font-semibold text-foreground">인성질 멘트 등록</h2>
+          <h2 className="text-xl font-semibold text-foreground">인성질 제보</h2>
 
           <div>
             <div className="flex items-center justify-between mb-2">
               <label htmlFor="insung-content" className="text-sm text-muted">
-                멘트 ({content.trim().length}/500)
+                무슨 일이 있었나요? ({content.trim().length}/500)
               </label>
               <button
                 type="button"
@@ -296,13 +296,13 @@ export default function InsungPage() {
               onChange={(e) => setContent(e.target.value)}
               maxLength={500}
               rows={3}
-              placeholder="카톡에서 복사한 멘트를 붙여넣으세요"
+              placeholder={"한 말을 옮겨 적거나, 한 행동을 적어주세요\n예) 약속 30분 늦고 사과 한마디 없음"}
               className="w-full rounded-lg border border-border bg-page px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-focus"
             />
           </div>
 
           <div>
-            <p className="text-sm text-muted mb-2">누가 한 말인가요?</p>
+            <p className="text-sm text-muted mb-2">누가 했나요?</p>
             <div className="grid grid-cols-5 gap-2">
               {PLAYERS.map((player) => (
                 <button
@@ -340,7 +340,7 @@ export default function InsungPage() {
               onChange={(e) => setSaidAt(e.target.value)}
               // 입력칸 어디를 눌러도 달력이 열리도록 (지원 브라우저만)
               onClick={(e) => e.currentTarget.showPicker?.()}
-              aria-label="발언 날짜"
+              aria-label="발생 날짜"
               className="sm:w-44 cursor-pointer rounded-lg border border-border bg-page px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-focus"
             />
           </div>
@@ -419,7 +419,7 @@ export default function InsungPage() {
                     <span className="text-sm font-medium text-foreground">
                       {row.rank === 1 && row.score > 0 ? '👑 ' : ''}
                       {row.rank}위 {getPlayerDisplayName(row.player)}
-                      <span className="text-xs text-muted ml-2">멘트 {row.quoteCount}개</span>
+                      <span className="text-xs text-muted ml-2">제보 {row.quoteCount}개</span>
                     </span>
                     <span className="text-xl font-bold text-accent inline-flex items-center">
                       <span className="mr-2">😈</span>
@@ -427,13 +427,13 @@ export default function InsungPage() {
                     </span>
                   </button>
                 ))}
-                <p className="text-xs text-muted pt-1">이름을 누르면 그 사람의 멘트를 모아봅니다.</p>
+                <p className="text-xs text-muted pt-1">이름을 누르면 그 사람의 제보를 모아봅니다.</p>
               </div>
             )
           ) : (
             <div className="space-y-3">
               {quotes.length === 0 && !quotesLoading && (
-                <p className="text-sm text-muted">아직 등록된 멘트가 없습니다.</p>
+                <p className="text-sm text-muted">아직 등록된 제보가 없습니다.</p>
               )}
               {quotes.map((quote, index) => (
                 <QuoteCard
@@ -486,11 +486,11 @@ function QuoteCard({
       <div className="flex items-start gap-3">
         {rankLabel && <span className="text-lg font-bold text-accent w-6 shrink-0">{rankLabel}</span>}
         <div className="flex-1 min-w-0">
-          <p className="text-foreground whitespace-pre-wrap break-words">“{quote.content}”</p>
+          <p className="text-foreground whitespace-pre-wrap break-words">{quote.content}</p>
           <p className="text-sm font-semibold text-foreground mt-2">— {getPlayerDisplayName(quote.author)}</p>
           {quote.context && <p className="text-xs text-muted mt-1">상황: {quote.context}</p>}
           <p className="text-xs text-muted mt-1">
-            {quote.saidAt ? `${quote.saidAt.replace(/-/g, '.')} 발언 · ` : ''}
+            {quote.saidAt ? `${quote.saidAt.replace(/-/g, '.')} 발생 · ` : ''}
             {getPlayerDisplayName(quote.registrant)} 등록 · {formatDate(quote.createdAt)}
           </p>
           {quote.voters.length > 0 && (
@@ -502,7 +502,7 @@ function QuoteCard({
             type="button"
             onClick={onToggleVote}
             disabled={isOwnQuote}
-            title={isOwnQuote ? '본인 멘트에는 투표할 수 없습니다' : quote.myVote ? '투표 취소' : '공감 +1'}
+            title={isOwnQuote ? '본인이 주인공인 제보에는 투표할 수 없습니다' : quote.myVote ? '투표 취소' : '공감 +1'}
             className={`min-w-14 px-3 py-1.5 rounded-lg text-sm font-semibold border transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
               quote.myVote
                 ? 'bg-accent-gradient text-white border-transparent'

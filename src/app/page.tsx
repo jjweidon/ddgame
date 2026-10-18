@@ -17,7 +17,7 @@ const games = [
   {
     id: 'insung',
     name: '인성질 랭킹',
-    description: '카톡 인성질 멘트 박제 · 투표 페이지로 이동',
+    description: '말·행동 인성질 제보 · 투표 페이지로 이동',
     href: '/insung',
     available: true,
   },

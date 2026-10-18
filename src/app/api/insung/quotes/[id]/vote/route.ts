@@ -11,13 +11,13 @@ async function resolveVoteRequest({ params }: RouteContext) {
   await dbConnect();
   const { id } = await params;
   if (!mongoose.Types.ObjectId.isValid(id)) {
-    return { error: jsonError('유효하지 않은 멘트 ID입니다.', 400) };
+    return { error: jsonError('유효하지 않은 제보 ID입니다.', 400) };
   }
   const me = await getSessionPlayer();
   if (!me) return { error: jsonError('로그인이 필요합니다.', 401, { requiresLogin: true }) };
 
   const quote = await InsungQuote.findById(id).select({ author: 1 });
-  if (!quote) return { error: jsonError('해당 멘트를 찾을 수 없습니다.', 404) };
+  if (!quote) return { error: jsonError('해당 제보를 찾을 수 없습니다.', 404) };
   return { id, me, quote };
 }
 
@@ -28,8 +28,8 @@ export async function POST(_request: Request, context: RouteContext) {
     if ('error' in resolved) return resolved.error;
     const { id, me, quote } = resolved;
 
-    if (quote.author === me) return jsonError('본인 멘트에는 투표할 수 없습니다.', 403);
-    if (!(await addVote(id, me))) return jsonError('이미 투표한 멘트입니다.', 409);
+    if (quote.author === me) return jsonError('본인이 주인공인 제보에는 투표할 수 없습니다.', 403);
+    if (!(await addVote(id, me))) return jsonError('이미 투표한 제보입니다.', 409);
 
     return NextResponse.json({ success: true });
   } catch (error: any) {
@@ -45,7 +45,7 @@ export async function DELETE(_request: Request, context: RouteContext) {
     if ('error' in resolved) return resolved.error;
     const { id, me } = resolved;
 
-    if (!(await removeVote(id, me))) return jsonError('투표하지 않은 멘트입니다.', 404);
+    if (!(await removeVote(id, me))) return jsonError('투표하지 않은 제보입니다.', 404);
 
     return NextResponse.json({ success: true });
   } catch (error: any) {

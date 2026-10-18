@@ -13,8 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "뚱팸 승률 기록",
-  description: "뚱팸의 게임별 승률 기록을 관리하는 웹 애플리케이션",
+  title: "뚱팸",
 };
 
 export default function RootLayout({

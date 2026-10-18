@@ -29,7 +29,7 @@ export default function Home() {
       <div className="max-w-2xl mx-auto">
         <div className="text-center mb-8">
           <h1 className="text-3xl sm:text-4xl font-bold mb-2 text-foreground tracking-tight">
-            뚱팸 승률 기록
+            뚱팸 기록 사이트
           </h1>
           <p className="text-muted text-sm">게임을 선택해 승률 기록 페이지로 이동하세요</p>
         </div>

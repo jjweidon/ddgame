@@ -1,0 +1,53 @@
+#!/bin/sh
+# 커밋 메시지 규칙 검사 (기존 커밋 히스토리 기준)
+#
+#   <type>(<scope>)?: <한국어 요약>
+#
+#   type : feat | fix | refactor | style | docs | chore | test | perf
+#   scope: 선택, 소문자 메뉴/영역명 (sequence, cartan, insung ...)
+#   요약 : 72자 이하, 끝에 마침표 없음
+#   본문 : 선택. 쓸 경우 제목 다음 줄은 비워야 함
+#   금지 : Co-Authored-By 트레일러, Claude/AI 생성 표기
+
+MSG_FILE="$1"
+
+# 주석(#)·verbose diff 이후 내용 제외한 실제 메시지
+MSG=$(sed -e '/^# ------------------------ >8 ------------------------$/,$d' -e '/^#/d' "$MSG_FILE")
+SUBJECT=$(printf '%s\n' "$MSG" | sed -n '1p')
+SECOND=$(printf '%s\n' "$MSG" | sed -n '2p')
+
+fail() {
+  echo "✖ commit-msg: $1" >&2
+  echo "  예) feat(insung): 인성질 랭킹 메뉴 추가" >&2
+  echo "      fix: 히스토리 편집 버튼 UI 모바일 최적화" >&2
+  exit 1
+}
+
+# git이 자동 생성하는 메시지는 통과
+case "$SUBJECT" in
+  "Merge "*|"Revert "*|"fixup! "*|"squash! "*|"amend! "*) exit 0 ;;
+esac
+
+if printf '%s\n' "$MSG" | grep -qiE '^[[:space:]]*co-authored-by:'; then
+  fail "Co-Authored-By 트레일러는 넣지 않습니다."
+fi
+if printf '%s\n' "$MSG" | grep -qiE 'generated with .*claude|noreply@anthropic\.com'; then
+  fail "Claude/AI 생성 표기는 넣지 않습니다."
+fi
+
+[ -n "$SUBJECT" ] || fail "커밋 메시지가 비어 있습니다."
+
+if ! printf '%s\n' "$SUBJECT" | grep -qE '^(feat|fix|refactor|style|docs|chore|test|perf)(\([a-z0-9-]+\))?: [^ ]'; then
+  fail "제목은 '<type>(<scope>): <요약>' 형식이어야 합니다. (type: feat|fix|refactor|style|docs|chore|test|perf)"
+fi
+
+case "$SUBJECT" in
+  *.) fail "제목 끝에 마침표를 붙이지 않습니다." ;;
+esac
+
+LEN=$(printf '%s' "$SUBJECT" | LC_ALL=en_US.UTF-8 wc -m | tr -d ' ')
+[ "$LEN" -le 72 ] || fail "제목은 72자 이하여야 합니다. (현재 ${LEN}자)"
+
+[ -z "$SECOND" ] || fail "본문을 쓸 경우 제목 다음 줄은 비워야 합니다."
+
+exit 0

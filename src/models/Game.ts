@@ -1,17 +1,17 @@
 import mongoose, { Schema } from 'mongoose';
-import { validateCartanCompetitionRankEntries } from '@/utils/cartanCompetition';
+import { validateCatanCompetitionRankEntries } from '@/utils/catanCompetition';
 
 export const VALID_PLAYERS = ['잡', '큐', '지', '머', '웅'] as const;
 export type PlayerCode = typeof VALID_PLAYERS[number];
-export type GameType = 'sequence' | 'cartan';
+export type GameType = 'sequence' | 'catan';
 
-export interface ICartanRankEntry {
+export interface ICatanRankEntry {
   rank: number;
   players: string[];
 }
 
-export interface ICartanResult {
-  rankEntries: ICartanRankEntry[];
+export interface ICatanResult {
+  rankEntries: ICatanRankEntry[];
 }
 
 // 게임 로그 인터페이스 (하위 호환 + 다중 게임)
@@ -20,7 +20,7 @@ export interface IGame {
   gameType?: GameType;    // 구문서 하위호환: 미존재 시 sequence로 간주
   winningTeam?: string[]; // sequence 전용
   losingTeam?: string[];  // sequence 전용
-  cartanResult?: ICartanResult; // cartan 전용
+  catanResult?: ICatanResult; // catan 전용
   createdAt: Date;        // 생성 날짜
 }
 
@@ -28,7 +28,7 @@ export interface IGame {
 const GameSchema = new Schema<IGame>({
   gameType: {
     type: String,
-    enum: ['sequence', 'cartan'],
+    enum: ['sequence', 'catan'],
     default: 'sequence'
   },
   winningTeam: { 
@@ -36,7 +36,7 @@ const GameSchema = new Schema<IGame>({
     required: false,
     validate: {
       validator: function(team: string[]) {
-        if (this.cartanResult && Array.isArray(this.cartanResult.rankEntries)) return true;
+        if (this.catanResult && Array.isArray(this.catanResult.rankEntries)) return true;
         return Array.isArray(team) && team.length === 2;
       },
       message: '팀은 정확히 2명의 플레이어로 구성되어야 합니다.'
@@ -47,13 +47,13 @@ const GameSchema = new Schema<IGame>({
     required: false,
     validate: {
       validator: function(team: string[]) {
-        if (this.cartanResult && Array.isArray(this.cartanResult.rankEntries)) return true;
+        if (this.catanResult && Array.isArray(this.catanResult.rankEntries)) return true;
         return Array.isArray(team) && team.length === 2;
       },
       message: '팀은 정확히 2명의 플레이어로 구성되어야 합니다.'
     }
   },
-  cartanResult: {
+  catanResult: {
     rankEntries: [{
       rank: { type: Number, required: true, min: 1, max: 5 },
       players: [{ type: String, required: true }]
@@ -69,17 +69,17 @@ const GameSchema = new Schema<IGame>({
 
 // 중복 플레이어 검증 미들웨어
 GameSchema.pre('save', function(next) {
-  const isCartanGame =
-    this.gameType === 'cartan' ||
-    (this.cartanResult && Array.isArray(this.cartanResult.rankEntries) && this.cartanResult.rankEntries.length > 0);
+  const isCatanGame =
+    this.gameType === 'catan' ||
+    (this.catanResult && Array.isArray(this.catanResult.rankEntries) && this.catanResult.rankEntries.length > 0);
 
-  if (isCartanGame) {
-    const result = this.cartanResult;
+  if (isCatanGame) {
+    const result = this.catanResult;
     if (!result || !Array.isArray(result.rankEntries) || result.rankEntries.length === 0) {
       return next(new Error('카탄 결과 정보가 필요합니다.'));
     }
 
-    this.gameType = 'cartan';
+    this.gameType = 'catan';
 
     const allPlayers = result.rankEntries.flatMap((entry) => entry.players || []);
     if (allPlayers.length < 3 || allPlayers.length > 5) {
@@ -108,7 +108,7 @@ GameSchema.pre('save', function(next) {
       return next(new Error('카탄 등수는 반드시 1위부터 시작해야 합니다.'));
     }
 
-    const competition = validateCartanCompetitionRankEntries(result.rankEntries);
+    const competition = validateCatanCompetitionRankEntries(result.rankEntries);
     if (!competition.ok) {
       return next(new Error(competition.error));
     }

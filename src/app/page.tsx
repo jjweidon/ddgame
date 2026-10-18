@@ -8,10 +8,10 @@ const games = [
     available: true,
   },
   {
-    id: 'cartan',
+    id: 'catan',
     name: '카탄',
     description: '승률 기록 페이지로 이동',
-    href: '/cartan',
+    href: '/catan',
     available: true,
   },
   {

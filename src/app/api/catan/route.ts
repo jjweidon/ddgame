@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import Game, { IGame, VALID_PLAYERS } from '@/models/Game';
-import { getCartanPointsByContext, validateCartanCompetitionRankEntries } from '@/utils/cartanCompetition';
+import { getCatanPointsByContext, validateCatanCompetitionRankEntries } from '@/utils/catanCompetition';
 
 type PlayerSummary = {
   player: string;
@@ -17,7 +17,7 @@ type PlayerSummary = {
   rank: number;
 };
 
-const calculateCartanStats = (games: IGame[]) => {
+const calculateCatanStats = (games: IGame[]) => {
   const stats: Record<string, { totalPoints: number; totalGames: number; rankCounts: { 1: number; 2: number; 3: number; 4: number; 5: number } }> = {};
 
   VALID_PLAYERS.forEach((player) => {
@@ -29,11 +29,11 @@ const calculateCartanStats = (games: IGame[]) => {
   });
 
   games.forEach((game) => {
-    const entries = game.cartanResult?.rankEntries || [];
+    const entries = game.catanResult?.rankEntries || [];
     const playerCount = entries.reduce((sum, entry) => sum + (entry.players?.length || 0), 0);
 
     entries.forEach((entry) => {
-      const points = getCartanPointsByContext(playerCount, entry.rank);
+      const points = getCatanPointsByContext(playerCount, entry.rank);
 
       entry.players.forEach((player) => {
         if (!stats[player]) return;
@@ -77,7 +77,7 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const year = searchParams.get('year');
 
-    const query: Record<string, any> = { gameType: 'cartan' };
+    const query: Record<string, any> = { gameType: 'catan' };
     if (year) {
       const yearNum = parseInt(year, 10);
       if (!isNaN(yearNum)) {
@@ -93,7 +93,7 @@ export async function GET(request: Request) {
       success: true,
       data: {
         games,
-        stats: calculateCartanStats(games)
+        stats: calculateCatanStats(games)
       }
     });
   } catch (error) {
@@ -140,15 +140,15 @@ export async function POST(request: Request) {
       }
     }
 
-    const competition = validateCartanCompetitionRankEntries(rankEntries);
+    const competition = validateCatanCompetitionRankEntries(rankEntries);
     if (!competition.ok) {
       return NextResponse.json({ success: false, error: competition.error }, { status: 400 });
     }
 
     await dbConnect();
     const created = await Game.create({
-      gameType: 'cartan',
-      cartanResult: {
+      gameType: 'catan',
+      catanResult: {
         rankEntries
       }
     });

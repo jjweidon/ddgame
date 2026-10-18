@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import Game, { VALID_PLAYERS } from '@/models/Game';
-import { validateCartanCompetitionRankEntries } from '@/utils/cartanCompetition';
+import { validateCatanCompetitionRankEntries } from '@/utils/catanCompetition';
 
 // GET: 모든 게임 데이터 조회
 export async function GET(request: Request) {
@@ -30,8 +30,8 @@ export async function GET(request: Request) {
       }
     }
     
-    if (gameType === 'cartan') {
-      query.gameType = 'cartan';
+    if (gameType === 'catan') {
+      query.gameType = 'catan';
     } else {
       // 하위 호환: 기존 문서는 gameType이 없으므로 sequence로 간주
       query.$or = [{ gameType: 'sequence' }, { gameType: { $exists: false } }];
@@ -52,17 +52,17 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { gameType = 'sequence', winningTeam, losingTeam, cartanResult } = body;
+    const { gameType = 'sequence', winningTeam, losingTeam, catanResult } = body;
     
-    if (gameType === 'cartan') {
-      if (!cartanResult || !Array.isArray(cartanResult.rankEntries)) {
+    if (gameType === 'catan') {
+      if (!catanResult || !Array.isArray(catanResult.rankEntries)) {
         return NextResponse.json(
           { success: false, error: '카탄 결과 정보가 필요합니다.' },
           { status: 400 }
         );
       }
 
-      const allPlayers = cartanResult.rankEntries.flatMap((entry: any) => entry.players || []);
+      const allPlayers = catanResult.rankEntries.flatMap((entry: any) => entry.players || []);
       if (allPlayers.length < 3 || allPlayers.length > 5) {
         return NextResponse.json(
           { success: false, error: '카탄은 3명 이상 5명 이하만 참여할 수 있습니다.' },
@@ -87,15 +87,15 @@ export async function POST(request: Request) {
         }
       }
 
-      const competition = validateCartanCompetitionRankEntries(cartanResult.rankEntries);
+      const competition = validateCatanCompetitionRankEntries(catanResult.rankEntries);
       if (!competition.ok) {
         return NextResponse.json({ success: false, error: competition.error }, { status: 400 });
       }
 
       await dbConnect();
       const newGame = await Game.create({
-        gameType: 'cartan',
-        cartanResult
+        gameType: 'catan',
+        catanResult
       });
 
       return NextResponse.json(

@@ -4,7 +4,7 @@
 #   <type>(<scope>)?: <한국어 요약>
 #
 #   type : feat | fix | refactor | style | docs | chore | test | perf
-#   scope: 선택, 소문자 메뉴/영역명 (sequence, cartan, insung ...)
+#   scope: 선택, 소문자 메뉴/영역명 (sequence, catan, insung ...)
 #   요약 : 72자 이하, 끝에 마침표 없음
 #   본문 : 선택. 쓸 경우 제목 다음 줄은 비워야 함
 #   금지 : Co-Authored-By 트레일러, Claude/AI 생성 표기

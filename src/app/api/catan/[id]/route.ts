@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import mongoose from 'mongoose';
 import dbConnect from '@/lib/mongodb';
 import Game, { VALID_PLAYERS } from '@/models/Game';
-import { validateCartanCompetitionRankEntries } from '@/utils/cartanCompetition';
+import { validateCatanCompetitionRankEntries } from '@/utils/catanCompetition';
 
 export async function PATCH(
   request: Request,
@@ -52,14 +52,14 @@ export async function PATCH(
       }
     }
 
-    const competition = validateCartanCompetitionRankEntries(rankEntries);
+    const competition = validateCatanCompetitionRankEntries(rankEntries);
     if (!competition.ok) {
       return NextResponse.json({ success: false, error: competition.error }, { status: 400 });
     }
 
     const updated = await Game.findOneAndUpdate(
-      { _id: id, gameType: 'cartan' },
-      { $set: { cartanResult: { rankEntries } } },
+      { _id: id, gameType: 'catan' },
+      { $set: { catanResult: { rankEntries } } },
       { new: true, runValidators: true }
     );
 
@@ -95,7 +95,7 @@ export async function DELETE(
       );
     }
 
-    const deleted = await Game.findOneAndDelete({ _id: id, gameType: 'cartan' });
+    const deleted = await Game.findOneAndDelete({ _id: id, gameType: 'catan' });
     if (!deleted) {
       return NextResponse.json(
         { success: false, error: '해당 카탄 기록을 찾을 수 없습니다.' },

@@ -4,17 +4,17 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { getPlayerDisplayName } from '@/utils/playerNames';
 import {
-  getCartanSelectionAllowedRanks,
-  getDefaultRankForNextCartanPlayer,
-  validateCartanCompetitionRankEntries
-} from '@/utils/cartanCompetition';
+  getCatanSelectionAllowedRanks,
+  getDefaultRankForNextCatanPlayer,
+  validateCatanCompetitionRankEntries
+} from '@/utils/catanCompetition';
 
 type PlayerCode = '잡' | '큐' | '지' | '머' | '웅';
 
-type CartanGame = {
+type CatanGame = {
   _id: string;
   createdAt: string;
-  cartanResult: {
+  catanResult: {
     rankEntries: Array<{
       rank: number;
       players: PlayerCode[];
@@ -22,7 +22,7 @@ type CartanGame = {
   };
 };
 
-type CartanStats = {
+type CatanStats = {
   totalGames: number;
   playerStats: Array<{
     player: PlayerCode;
@@ -62,7 +62,7 @@ type SaveResultModalData = {
 
 const formatSignedPoints = (n: number) => (n > 0 ? `+${n}` : `${n}`);
 
-export default function CartanPage() {
+export default function CatanPage() {
   const [selectedPlayers, setSelectedPlayers] = useState<PlayerCode[]>([]);
   const [playerRanks, setPlayerRanks] = useState<Record<PlayerCode, number>>({
     잡: 1,
@@ -71,8 +71,8 @@ export default function CartanPage() {
     머: 1,
     웅: 1
   });
-  const [games, setGames] = useState<CartanGame[]>([]);
-  const [stats, setStats] = useState<CartanStats | null>(null);
+  const [games, setGames] = useState<CatanGame[]>([]);
+  const [stats, setStats] = useState<CatanStats | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -96,7 +96,7 @@ export default function CartanPage() {
   }, [selectedPlayers, playerRanks]);
 
   const getAvailableRanksForIndex = (index: number): number[] =>
-    getCartanSelectionAllowedRanks(selectedPlayers, playerRanks, index);
+    getCatanSelectionAllowedRanks(selectedPlayers, playerRanks, index);
 
   const getRankTextColorClass = (rank: number): string => {
     if (rank === 1) return 'text-lime-400';
@@ -120,16 +120,16 @@ export default function CartanPage() {
     return koreaTime.getFullYear();
   };
 
-  const fetchCartanData = async (): Promise<CartanStats | null> => {
+  const fetchCatanData = async (): Promise<CatanStats | null> => {
     try {
       const year = getCurrentYear();
-      const response = await fetch(`/api/cartan?year=${year}`);
+      const response = await fetch(`/api/catan?year=${year}`);
       const data = await response.json();
       if (!response.ok) {
         throw new Error(data.error || '카탄 데이터를 불러오지 못했습니다.');
       }
       setGames(data.data.games || []);
-      const nextStats = (data.data.stats || null) as CartanStats | null;
+      const nextStats = (data.data.stats || null) as CatanStats | null;
       setStats(nextStats);
       return nextStats;
     } catch (fetchError: any) {
@@ -139,7 +139,7 @@ export default function CartanPage() {
   };
 
   useEffect(() => {
-    fetchCartanData();
+    fetchCatanData();
   }, []);
 
   useEffect(() => {
@@ -159,7 +159,7 @@ export default function CartanPage() {
       let changed = false;
 
       selectedPlayers.forEach((player, index) => {
-        const allowed = getCartanSelectionAllowedRanks(selectedPlayers, next, index);
+        const allowed = getCatanSelectionAllowedRanks(selectedPlayers, next, index);
 
         if (!allowed.includes(next[player])) {
           next[player] = allowed[allowed.length - 1];
@@ -179,7 +179,7 @@ export default function CartanPage() {
       if (prev.length >= 5) return prev;
 
       // 선택 순서 기반 자동 순위: 경쟁 순위(동점 블록 다음 자리)
-      const nextRank = getDefaultRankForNextCartanPlayer(prev, playerRanks);
+      const nextRank = getDefaultRankForNextCatanPlayer(prev, playerRanks);
       setPlayerRanks((old) => ({ ...old, [player]: nextRank }));
       return [...prev, player];
     });
@@ -204,13 +204,13 @@ export default function CartanPage() {
       return;
     }
 
-    const competitionCheck = validateCartanCompetitionRankEntries(groupedRankEntries);
+    const competitionCheck = validateCatanCompetitionRankEntries(groupedRankEntries);
     if (!competitionCheck.ok) {
       setError(competitionCheck.error);
       return;
     }
 
-    const prevStatsSnapshot = stats ? (JSON.parse(JSON.stringify(stats)) as CartanStats) : null;
+    const prevStatsSnapshot = stats ? (JSON.parse(JSON.stringify(stats)) as CatanStats) : null;
     const participants = [...selectedPlayers];
     const rankEntriesSnapshot = groupedRankEntries.map((e) => ({
       rank: e.rank,
@@ -220,7 +220,7 @@ export default function CartanPage() {
 
     setLoading(true);
     try {
-      const response = await fetch('/api/cartan', {
+      const response = await fetch('/api/catan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -232,10 +232,10 @@ export default function CartanPage() {
         throw new Error(data.error || '카탄 기록 저장에 실패했습니다.');
       }
       resetForm();
-      const newStats = await fetchCartanData();
+      const newStats = await fetchCatanData();
 
       if (newStats) {
-        const getPlayerRow = (s: CartanStats, p: PlayerCode) =>
+        const getPlayerRow = (s: CatanStats, p: PlayerCode) =>
           s.playerStats.find((x) => x.player === p);
 
         const rows: SaveResultRow[] = participants.map((player) => {
@@ -274,9 +274,9 @@ export default function CartanPage() {
     }
   };
 
-  const startEditGame = (game: CartanGame) => {
+  const startEditGame = (game: CatanGame) => {
     const rankMap: Record<string, number> = {};
-    game.cartanResult.rankEntries.forEach((entry) => {
+    game.catanResult.rankEntries.forEach((entry) => {
       entry.players.forEach((player) => {
         rankMap[player] = entry.rank;
       });
@@ -305,12 +305,12 @@ export default function CartanPage() {
   const handleSaveEditGame = async (gameId: string) => {
     try {
       const rankEntries = buildRankEntriesFromEditMap();
-      const competitionCheck = validateCartanCompetitionRankEntries(rankEntries);
+      const competitionCheck = validateCatanCompetitionRankEntries(rankEntries);
       if (!competitionCheck.ok) {
         setError(competitionCheck.error);
         return;
       }
-      const response = await fetch(`/api/cartan/${gameId}`, {
+      const response = await fetch(`/api/catan/${gameId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ rankEntries })
@@ -321,7 +321,7 @@ export default function CartanPage() {
       }
       setSuccess('카탄 기록이 수정되었습니다.');
       cancelEditGame();
-      fetchCartanData();
+      fetchCatanData();
     } catch (editError: any) {
       setError(editError.message || '카탄 기록 수정에 실패했습니다.');
     }
@@ -330,7 +330,7 @@ export default function CartanPage() {
   const handleDeleteGame = async (gameId: string) => {
     if (!confirm('이 카탄 기록을 삭제하시겠습니까?')) return;
     try {
-      const response = await fetch(`/api/cartan/${gameId}`, {
+      const response = await fetch(`/api/catan/${gameId}`, {
         method: 'DELETE'
       });
       const data = await response.json();
@@ -341,7 +341,7 @@ export default function CartanPage() {
       if (editingGameId === gameId) {
         cancelEditGame();
       }
-      fetchCartanData();
+      fetchCatanData();
     } catch (deleteError: any) {
       setError(deleteError.message || '카탄 기록 삭제에 실패했습니다.');
     }
@@ -569,7 +569,7 @@ export default function CartanPage() {
                     </div>
                   ) : (
                     <div className="flex flex-wrap gap-2">
-                      {game.cartanResult.rankEntries
+                      {game.catanResult.rankEntries
                         .sort((a, b) => a.rank - b.rank)
                         .map((entry) => (
                           <span
@@ -608,7 +608,7 @@ export default function CartanPage() {
           className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 dark:bg-black/70 px-4 py-6 animate-fadeIn"
           role="dialog"
           aria-modal="true"
-          aria-labelledby="cartan-save-result-title"
+          aria-labelledby="catan-save-result-title"
           onClick={() => setSaveResultModal(null)}
         >
           <div
@@ -616,7 +616,7 @@ export default function CartanPage() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="px-5 pt-5 pb-3 border-b border-border">
-              <h2 id="cartan-save-result-title" className="text-lg font-semibold text-foreground">
+              <h2 id="catan-save-result-title" className="text-lg font-semibold text-foreground">
                 기록이 반영되었습니다
               </h2>
               <p className="text-sm text-muted mt-1">

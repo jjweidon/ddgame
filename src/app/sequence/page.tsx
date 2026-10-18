@@ -9,9 +9,9 @@ import GameDashboardBannerCarousel from '@/components/GameDashboardBannerCarouse
 import PenaltyModal from '@/components/PenaltyModal';
 import { useStatsStore } from '@/lib/statsStore';
 import { IGame } from '@/models/Game';
+import { RECORD_SUBMISSION_LOCK_MINUTES } from '@/constants/recordSubmission';
 
 export default function SequencePage() {
-  const MIN_TIME_BETWEEN_REGISTRATIONS_MINUTES = 5;
   const [winningTeam, setWinningTeam] = useState<string[]>([]);
   const [losingTeam, setLosingTeam] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -77,35 +77,32 @@ export default function SequencePage() {
     setError(null);
 
     try {
-      const recentGamesResponse = await fetch('/api/sequence/games');
-      const recentGamesData = await recentGamesResponse.json();
+      const requestRecordSave = async (overridePassword?: string) => {
+        return fetch('/api/sequence/games', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            winningTeam,
+            losingTeam,
+            overridePassword,
+          }),
+        });
+      };
 
-      if (recentGamesResponse.ok && recentGamesData.data && recentGamesData.data.length > 0) {
-        const mostRecentGame = recentGamesData.data[0];
-        const lastRegistrationTime = new Date(mostRecentGame.createdAt);
-        const currentTime = new Date();
-        const timeDifferenceMinutes = (currentTime.getTime() - lastRegistrationTime.getTime()) / (1000 * 60);
+      let response = await requestRecordSave();
+      let data = await response.json();
 
-        if (timeDifferenceMinutes < MIN_TIME_BETWEEN_REGISTRATIONS_MINUTES) {
-          setError('최근에 등록한 데이터가 있습니다');
-          setLoading(false);
-          setTimeout(() => setError(null), 3000);
-          return;
+      if (!response.ok && data.requiresPassword) {
+        const password = window.prompt(`최근 ${RECORD_SUBMISSION_LOCK_MINUTES}분 이내 기록이 있습니다. 관리자 비밀번호를 입력하세요.`);
+        if (!password) {
+          throw new Error(data.error || '비밀번호 입력이 취소되었습니다.');
         }
+        response = await requestRecordSave(password);
+        data = await response.json();
       }
 
-      const response = await fetch('/api/sequence/games', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          winningTeam,
-          losingTeam,
-        }),
-      });
-
-      const data = await response.json();
       if (!response.ok) {
         throw new Error(data.error || '게임 데이터 저장 중 오류가 발생했습니다.');
       }

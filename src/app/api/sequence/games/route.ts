@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import Game, { VALID_PLAYERS } from '@/models/Game';
 import { validateCatanCompetitionRankEntries } from '@/utils/catanCompetition';
+import { enforceRecordSubmissionLock } from '@/server/recordSubmissionGuard';
 
 // GET: 모든 게임 데이터 조회
 export async function GET(request: Request) {
@@ -52,7 +53,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { gameType = 'sequence', winningTeam, losingTeam, catanResult } = body;
+    const { gameType = 'sequence', winningTeam, losingTeam, catanResult, overridePassword } = body;
     
     if (gameType === 'catan') {
       if (!catanResult || !Array.isArray(catanResult.rankEntries)) {
@@ -93,6 +94,9 @@ export async function POST(request: Request) {
       }
 
       await dbConnect();
+      const lockCheck = await enforceRecordSubmissionLock(overridePassword);
+      if (!lockCheck.ok) return lockCheck.response;
+
       const newGame = await Game.create({
         gameType: 'catan',
         catanResult
@@ -141,6 +145,8 @@ export async function POST(request: Request) {
     }
     
     await dbConnect();
+    const lockCheck = await enforceRecordSubmissionLock(overridePassword);
+    if (!lockCheck.ok) return lockCheck.response;
     
     const newGame = await Game.create({
       gameType: 'sequence',

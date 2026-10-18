@@ -1,0 +1,1 @@
+export const RECORD_SUBMISSION_LOCK_MINUTES = 5;

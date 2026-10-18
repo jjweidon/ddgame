@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import Game, { IGame, VALID_PLAYERS } from '@/models/Game';
 import { getCatanPointsByContext, validateCatanCompetitionRankEntries } from '@/utils/catanCompetition';
+import { enforceRecordSubmissionLock } from '@/server/recordSubmissionGuard';
 
 type PlayerSummary = {
   player: string;
@@ -108,7 +109,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { rankEntries } = body;
+    const { rankEntries, overridePassword } = body;
 
     if (!Array.isArray(rankEntries) || rankEntries.length === 0) {
       return NextResponse.json(
@@ -146,6 +147,9 @@ export async function POST(request: Request) {
     }
 
     await dbConnect();
+    const lockCheck = await enforceRecordSubmissionLock(overridePassword);
+    if (!lockCheck.ok) return lockCheck.response;
+
     const created = await Game.create({
       gameType: 'catan',
       catanResult: {

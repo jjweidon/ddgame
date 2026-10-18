@@ -8,6 +8,7 @@ import {
   getDefaultRankForNextCatanPlayer,
   validateCatanCompetitionRankEntries
 } from '@/utils/catanCompetition';
+import { RECORD_SUBMISSION_LOCK_MINUTES } from '@/constants/recordSubmission';
 
 type PlayerCode = '잡' | '큐' | '지' | '머' | '웅';
 
@@ -220,14 +221,29 @@ export default function CatanPage() {
 
     setLoading(true);
     try {
-      const response = await fetch('/api/catan', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          rankEntries: groupedRankEntries
-        })
-      });
-      const data = await response.json();
+      const requestRecordSave = async (overridePassword?: string) => {
+        return fetch('/api/catan', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            rankEntries: groupedRankEntries,
+            overridePassword
+          })
+        });
+      };
+
+      let response = await requestRecordSave();
+      let data = await response.json();
+
+      if (!response.ok && data.requiresPassword) {
+        const password = window.prompt(`최근 ${RECORD_SUBMISSION_LOCK_MINUTES}분 이내 기록이 있습니다. 관리자 비밀번호를 입력하세요.`);
+        if (!password) {
+          throw new Error(data.error || '비밀번호 입력이 취소되었습니다.');
+        }
+        response = await requestRecordSave(password);
+        data = await response.json();
+      }
+
       if (!response.ok) {
         throw new Error(data.error || '카탄 기록 저장에 실패했습니다.');
       }

@@ -14,6 +14,13 @@ const games = [
     href: '/cartan',
     available: true,
   },
+  {
+    id: 'insung',
+    name: '인성질 랭킹',
+    description: '카톡 인성질 멘트 박제 · 투표 페이지로 이동',
+    href: '/insung',
+    available: true,
+  },
 ];
 
 export default function Home() {

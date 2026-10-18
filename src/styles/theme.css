@@ -6,6 +6,9 @@
  */
 
 :root {
+  /* 네이티브 폼 컨트롤(날짜 선택 등)도 테마에 맞춰 렌더링 */
+  color-scheme: light;
+
   /* === 배경 === */
   --token-page: #fafafa;
   --token-surface: #ffffff;
@@ -44,6 +47,8 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
+    color-scheme: dark;
+
     /* === 배경 - 진한 블랙 === */
     --token-page: #000000;
     --token-surface: #0a0a0a;

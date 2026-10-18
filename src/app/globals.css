@@ -134,14 +134,18 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   outline-offset: 2px;
 }
 
-/* 악센트 그라데이션 (cyan → purple → pink) */
+/* 악센트 그라데이션 (cyan → purple → pink)
+ * background-origin: border-box — 투명 테두리 영역까지 그라데이션을 깔아야
+ * 테두리 밑에 반대편 색(핑크/시안)이 반복되어 얇은 선으로 보이지 않음 */
 .bg-accent-gradient {
   background: linear-gradient(to right, #22d3ee, #a855f7, #ec4899);
+  background-origin: border-box;
 }
 
 @media (prefers-color-scheme: dark) {
   .bg-accent-gradient {
     background: linear-gradient(to right, #06b6d4, #a855f7, #ec4899);
+    background-origin: border-box;
   }
 }
 

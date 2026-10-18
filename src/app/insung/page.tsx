@@ -338,8 +338,10 @@ export default function InsungPage() {
               value={saidAt}
               max={getKstToday()}
               onChange={(e) => setSaidAt(e.target.value)}
+              // 입력칸 어디를 눌러도 달력이 열리도록 (지원 브라우저만)
+              onClick={(e) => e.currentTarget.showPicker?.()}
               aria-label="발언 날짜"
-              className="rounded-lg border border-border bg-page px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-focus"
+              className="sm:w-44 cursor-pointer rounded-lg border border-border bg-page px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-focus"
             />
           </div>
 

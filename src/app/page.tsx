@@ -21,6 +21,13 @@ const games = [
     href: '/insung',
     available: true,
   },
+  {
+    id: 'picky',
+    name: '편식 도감',
+    description: '안 먹는 음식 기록 페이지로 이동',
+    href: '/picky',
+    available: true,
+  },
 ];
 
 export default function Home() {

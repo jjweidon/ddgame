@@ -1,12 +1,9 @@
 import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
-import { VALID_PLAYERS, PlayerCode } from '@/models/Game';
 import PickyFood from '@/models/PickyFood';
 import {
-  PICKY_FOOD_CATEGORIES,
   PICKY_FOOD_NAME_MAX,
   PICKY_FOOD_NOTE_MAX,
-  PickyFoodCategory,
   isPickyEater,
   normalizeFoodName
 } from '@/constants/pickyFood';
@@ -40,8 +37,6 @@ export async function POST(request: Request) {
     const { eater } = body;
     const name = typeof body.name === 'string' ? body.name.trim() : '';
     const note = typeof body.note === 'string' ? body.note.trim() : '';
-    const category: PickyFoodCategory = PICKY_FOOD_CATEGORIES.includes(body.category) ? body.category : '기타';
-    const registrant: PlayerCode | undefined = VALID_PLAYERS.includes(body.registrant) ? body.registrant : undefined;
 
     if (!isPickyEater(eater)) return invalidEaterResponse();
     if (!name || name.length > PICKY_FOOD_NAME_MAX) {
@@ -59,15 +54,12 @@ export async function POST(request: Request) {
 
     await dbConnect();
     const normalizedName = normalizeFoodName(name);
-    const existing = await PickyFood.findOne({ eater, normalizedName }).select({ name: 1, graduatedAt: 1 });
+    const existing = await PickyFood.findOne({ eater, normalizedName }).select({ name: 1 });
     if (existing) {
-      const eaterName = getPlayerDisplayName(eater);
       return NextResponse.json(
         {
           success: false,
-          error: existing.graduatedAt
-            ? `'${existing.name}'${josa(existing.name, '은/는')} ${eaterName}${josa(eaterName, '이/가')} 이미 졸업한 음식이에요. 다시 안 먹는다면 목록에서 졸업 취소하세요.`
-            : `'${existing.name}'${josa(existing.name, '은/는')} 이미 ${eaterName} 도감에 있어요.`
+          error: `'${existing.name}'${josa(existing.name, '은/는')} 이미 ${getPlayerDisplayName(eater)} 도감에 있어요.`
         },
         { status: 409 }
       );
@@ -77,9 +69,7 @@ export async function POST(request: Request) {
       eater,
       name,
       normalizedName,
-      category,
-      note: note || undefined,
-      registrant
+      note: note || undefined
     });
 
     return NextResponse.json({ success: true, data: created }, { status: 201 });

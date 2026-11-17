@@ -2,10 +2,10 @@ import { NextResponse } from 'next/server';
 import mongoose from 'mongoose';
 import dbConnect from '@/lib/mongodb';
 import InsungQuote from '@/models/InsungQuote';
-import InsungVote from '@/models/InsungVote';
 import { getSessionPlayer, isAdminPassword, jsonError } from '@/server/insung/auth';
+import { deleteQuote } from '@/server/insung/quotes';
 
-// 제보 삭제: 등록자 본인 또는 관리자 비밀번호
+// 제보 삭제: 등록자 본인 또는 관리자 비밀번호. 이 제보에 준 포인트는 모두 환불
 export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -25,8 +25,7 @@ export async function DELETE(
       return jsonError('등록자 본인이거나 관리자 비밀번호가 필요합니다.', 403, { requiresAdmin: true });
     }
 
-    await InsungVote.deleteMany({ quoteId: id });
-    await InsungQuote.deleteOne({ _id: id });
+    await deleteQuote(id);
 
     return NextResponse.json({ success: true, message: '제보가 삭제되었습니다.' });
   } catch (error: any) {

@@ -3,15 +3,16 @@ import dbConnect from '@/lib/mongodb';
 import InsungQuote from '@/models/InsungQuote';
 import { VALID_PLAYERS } from '@/models/Game';
 import { jsonError } from '@/server/insung/auth';
+import { POINT_TOTAL_EXPR } from '@/server/insung/quotes';
 
 export const dynamic = 'force-dynamic';
 
-// 주인공별 점수(받은 투표 합) · 제보 수 · 경쟁 순위 (동점 시 다음 순위 건너뜀)
+// 주인공별 점수(받은 포인트 합) · 제보 수 · 경쟁 순위 (동점 시 다음 순위 건너뜀)
 export async function GET() {
   try {
     await dbConnect();
     const grouped = await InsungQuote.aggregate<{ _id: string; score: number; quoteCount: number }>([
-      { $group: { _id: '$author', score: { $sum: '$voteCount' }, quoteCount: { $sum: 1 } } }
+      { $group: { _id: '$author', score: { $sum: POINT_TOTAL_EXPR }, quoteCount: { $sum: 1 } } }
     ]);
     const byPlayer = new Map(grouped.map((row) => [row._id, row]));
 

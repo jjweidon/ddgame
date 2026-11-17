@@ -3,12 +3,14 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { getPlayerDisplayName } from '@/utils/playerNames';
+import { INSUNG_POINT_MAX, INSUNG_POINT_MIN } from '@/constants/insungPoints';
 
 type PlayerCode = '잡' | '큐' | '지' | '머' | '웅';
 
 const PLAYERS: PlayerCode[] = ['잡', '큐', '지', '머', '웅'];
 const PAGE_SIZE = 30;
 const TOP_LIMIT = 10;
+const POINT_OPTIONS = Array.from({ length: INSUNG_POINT_MAX - INSUNG_POINT_MIN + 1 }, (_, i) => INSUNG_POINT_MIN + i);
 
 type Quote = {
   _id: string;
@@ -18,10 +20,13 @@ type Quote = {
   saidAt?: string;
   registrant: PlayerCode;
   voteCount: number;
+  pointTotal: number;
   createdAt: string;
-  voters: PlayerCode[];
-  myVote: boolean;
+  voters: Array<{ player: PlayerCode; points: number }>;
+  myPoints: number; // 0이면 투표 안 함
 };
+
+type PointBudget = { month: string; granted: number; carriedOver: number; spent: number; remaining: number };
 
 type LeaderboardRow = { player: PlayerCode; score: number; quoteCount: number; rank: number };
 type AuthStatus = { me: PlayerCode | null; players: Array<{ player: PlayerCode; hasPin: boolean }> };
@@ -62,7 +67,9 @@ export default function InsungPage() {
   const [author, setAuthor] = useState<PlayerCode | null>(null);
   const [context, setContext] = useState('');
   const [saidAt, setSaidAt] = useState(getKstToday());
+  const [points, setPoints] = useState(INSUNG_POINT_MIN);
   const [submitting, setSubmitting] = useState(false);
+  const [budget, setBudget] = useState<PointBudget | null>(null);
 
   const [message, setMessage] = useState<{ type: 'error' | 'success'; text: string } | null>(null);
 
@@ -74,6 +81,11 @@ export default function InsungPage() {
   const fetchAuth = useCallback(async () => {
     const result = await api<AuthStatus>('/api/insung/auth/status');
     if (result.ok && result.data) setAuth(result.data);
+  }, []);
+
+  const fetchBudget = useCallback(async () => {
+    const result = await api<PointBudget | null>('/api/insung/budget');
+    if (result.ok) setBudget(result.data ?? null);
   }, []);
 
   const fetchLeaderboard = useCallback(async () => {
@@ -112,13 +124,18 @@ export default function InsungPage() {
   );
 
   const refreshAll = useCallback(async () => {
-    await Promise.all([fetchLeaderboard(), tab !== 'ranking' || authorFilter ? fetchQuotes() : null]);
-  }, [fetchLeaderboard, fetchQuotes, tab, authorFilter]);
+    await Promise.all([
+      fetchLeaderboard(),
+      fetchBudget(),
+      tab !== 'ranking' || authorFilter ? fetchQuotes() : null
+    ]);
+  }, [fetchLeaderboard, fetchBudget, fetchQuotes, tab, authorFilter]);
 
   useEffect(() => {
     fetchAuth();
     fetchLeaderboard();
-  }, [fetchAuth, fetchLeaderboard]);
+    fetchBudget();
+  }, [fetchAuth, fetchLeaderboard, fetchBudget]);
 
   useEffect(() => {
     if (tab !== 'ranking' || authorFilter) fetchQuotes();
@@ -148,7 +165,7 @@ export default function InsungPage() {
     setSubmitting(true);
     const result = await api<{ status: 'created' | 'merged' | 'duplicate' }>('/api/insung/quotes', {
       method: 'POST',
-      body: JSON.stringify({ content, author, context, saidAt })
+      body: JSON.stringify({ content, author, context, saidAt, points })
     });
     setSubmitting(false);
 
@@ -166,15 +183,19 @@ export default function InsungPage() {
       setContext('');
       setAuthor(null);
       setSaidAt(getKstToday());
+      setPoints(INSUNG_POINT_MIN);
     }
     refreshAll();
   };
 
-  const handleToggleVote = async (quote: Quote) => {
+  // 같은 점수를 다시 누르면 취소, 다른 점수면 투표·변경
+  const handleVote = async (quote: Quote, selected: number) => {
     setMessage(null);
     if (!requireLogin()) return;
+    const cancel = quote.myPoints === selected;
     const result = await api(`/api/insung/quotes/${quote._id}/vote`, {
-      method: quote.myVote ? 'DELETE' : 'POST'
+      method: cancel ? 'DELETE' : 'POST',
+      body: cancel ? undefined : JSON.stringify({ points: selected })
     });
     if (!result.ok) showError(result.error);
     refreshAll();
@@ -185,7 +206,7 @@ export default function InsungPage() {
     const isRegistrant = me === quote.registrant;
     let adminPassword: string | undefined;
     if (isRegistrant) {
-      if (!window.confirm('이 제보를 삭제할까요? 받은 투표도 함께 사라집니다.')) return;
+      if (!window.confirm('이 제보를 삭제할까요? 이 제보에 준 포인트는 모두 돌려줍니다.')) return;
     } else {
       adminPassword = window.prompt('관리자 비밀번호를 입력하세요.') ?? undefined;
       if (!adminPassword) return;
@@ -202,12 +223,14 @@ export default function InsungPage() {
   const handleLogout = async () => {
     await api('/api/insung/auth/logout', { method: 'POST' });
     await fetchAuth();
+    setBudget(null);
     if (tab !== 'ranking' || authorFilter) fetchQuotes();
   };
 
   const handleLoggedIn = async () => {
     setLoginOpen(false);
     await fetchAuth();
+    fetchBudget();
     if (tab !== 'ranking' || authorFilter) fetchQuotes();
   };
 
@@ -222,6 +245,7 @@ export default function InsungPage() {
   };
 
   const showFeed = tab !== 'ranking' || authorFilter !== null;
+  const remaining = budget?.remaining ?? INSUNG_POINT_MAX;
 
   return (
     <main className="min-h-screen bg-page py-8 px-4 sm:px-6">
@@ -246,9 +270,18 @@ export default function InsungPage() {
                 <span className="font-semibold">{getPlayerDisplayName(me)}</span>
                 <span className="text-muted">(으)로 접속 중</span>
               </span>
-              <button type="button" onClick={handleLogout} className="text-muted hover:text-accent">
-                로그아웃
-              </button>
+              <span className="flex items-center gap-3">
+                {budget && (
+                  <span className="text-foreground" title="이번 달 남은 포인트 / 이번 달 받은 포인트(이월 포함)">
+                    🔥 <span className="font-semibold text-accent">{budget.remaining}</span>
+                    <span className="text-muted"> / {budget.granted + budget.carriedOver}</span>
+                    {budget.carriedOver > 0 && <span className="text-xs text-muted"> (+{budget.carriedOver} 이월)</span>}
+                  </span>
+                )}
+                <button type="button" onClick={handleLogout} className="text-muted hover:text-accent">
+                  로그아웃
+                </button>
+              </span>
             </>
           ) : (
             <>
@@ -319,9 +352,18 @@ export default function InsungPage() {
                 </button>
               ))}
             </div>
-            {author && me && author === me && (
-              <p className="text-xs text-muted mt-2">자수는 0점에서 시작합니다. 다른 사람이 투표하면 점수가 올라요.</p>
-            )}
+          </div>
+
+          <div>
+            <p className="text-sm text-muted mb-2">
+              몇 포인트를 줄까요? <span className="text-xs">(이번 달 남은 포인트에서 차감, 0은 투표 없이 등록)</span>
+            </p>
+            <PointPicker
+              options={[0, ...POINT_OPTIONS]}
+              selected={points}
+              isDisabled={(value) => value > remaining}
+              onSelect={setPoints}
+            />
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3">
@@ -351,7 +393,7 @@ export default function InsungPage() {
             disabled={submitting}
             className="w-full bg-accent-gradient text-white font-semibold py-3 rounded-lg disabled:opacity-50"
           >
-            {submitting ? '등록 중...' : '박제하기 (+1)'}
+            {submitting ? '등록 중...' : points > 0 ? `박제하기 (🔥${points})` : '박제하기'}
           </button>
         </section>
 
@@ -386,7 +428,7 @@ export default function InsungPage() {
                 {(
                   [
                     ['latest', '최신순'],
-                    ['top', '투표순']
+                    ['top', '포인트순']
                   ] as Array<[FeedSort, string]>
                 ).map(([key, label]) => (
                   <button
@@ -439,9 +481,9 @@ export default function InsungPage() {
                 <QuoteCard
                   key={quote._id}
                   quote={quote}
-                  me={me}
+                  remaining={remaining}
                   rankLabel={tab === 'top' && !authorFilter ? `${index + 1}` : undefined}
-                  onToggleVote={() => handleToggleVote(quote)}
+                  onVote={(selected) => handleVote(quote, selected)}
                   onDelete={() => handleDelete(quote)}
                 />
               ))}
@@ -467,20 +509,54 @@ export default function InsungPage() {
   );
 }
 
+function PointPicker({
+  options = POINT_OPTIONS,
+  selected,
+  isDisabled,
+  onSelect
+}: {
+  options?: number[];
+  selected: number;
+  isDisabled: (value: number) => boolean;
+  onSelect: (value: number) => void;
+}) {
+  return (
+    <div className="flex gap-1.5">
+      {options.map((value) => (
+        <button
+          key={value}
+          type="button"
+          onClick={() => onSelect(value)}
+          disabled={isDisabled(value)}
+          aria-pressed={selected === value}
+          className={`w-9 h-8 rounded-md text-sm font-semibold border transition-colors disabled:opacity-30 disabled:cursor-not-allowed ${
+            selected === value
+              ? 'bg-accent-gradient text-white border-transparent'
+              : 'border-border text-foreground hover:bg-surface'
+          }`}
+        >
+          {value}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 function QuoteCard({
   quote,
-  me,
+  remaining,
   rankLabel,
-  onToggleVote,
+  onVote,
   onDelete
 }: {
   quote: Quote;
-  me: PlayerCode | null;
+  remaining: number;
   rankLabel?: string;
-  onToggleVote: () => void;
+  onVote: (points: number) => void;
   onDelete: () => void;
 }) {
-  const isOwnQuote = me === quote.author;
+  // 점수를 바꿀 때 필요한 포인트는 서버가 최종 판단 (지난달 투표는 새 점수 전부 차감)
+  const exceedsBudget = (value: number) => value - quote.myPoints > remaining;
   return (
     <div className="bg-surface-hover rounded-lg px-4 py-3">
       <div className="flex items-start gap-3">
@@ -494,27 +570,24 @@ function QuoteCard({
             {getPlayerDisplayName(quote.registrant)} 등록 · {formatDate(quote.createdAt)}
           </p>
           {quote.voters.length > 0 && (
-            <p className="text-xs text-muted mt-1">👍 {quote.voters.map(getPlayerDisplayName).join(', ')}</p>
+            <p className="text-xs text-muted mt-1">
+              🔥 {quote.voters.map((voter) => `${getPlayerDisplayName(voter.player)} ${voter.points}`).join(' · ')}
+            </p>
           )}
         </div>
-        <div className="flex flex-col items-end gap-2 shrink-0">
-          <button
-            type="button"
-            onClick={onToggleVote}
-            disabled={isOwnQuote}
-            title={isOwnQuote ? '본인이 주인공인 제보에는 투표할 수 없습니다' : quote.myVote ? '투표 취소' : '공감 +1'}
-            className={`min-w-14 px-3 py-1.5 rounded-lg text-sm font-semibold border transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
-              quote.myVote
-                ? 'bg-accent-gradient text-white border-transparent'
-                : 'border-border text-foreground hover:bg-surface'
-            }`}
-          >
-            👍 {quote.voteCount}
-          </button>
-          <button type="button" onClick={onDelete} className="text-xs text-muted hover:text-danger">
+        <div className="flex flex-col items-end gap-1 shrink-0">
+          <span className="text-lg font-bold text-accent">🔥 {quote.pointTotal}</span>
+          <span className="text-xs text-muted">{quote.voteCount}명</span>
+          <button type="button" onClick={onDelete} className="text-xs text-muted hover:text-danger mt-1">
             삭제
           </button>
         </div>
+      </div>
+      <div className="mt-3 flex items-center gap-2 flex-wrap">
+        <PointPicker selected={quote.myPoints} isDisabled={exceedsBudget} onSelect={onVote} />
+        <span className="text-xs text-muted">
+          {quote.myPoints > 0 ? '같은 숫자를 다시 누르면 취소' : '포인트를 골라 투표'}
+        </span>
       </div>
     </div>
   );

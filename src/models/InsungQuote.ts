@@ -1,7 +1,7 @@
 import mongoose, { Schema } from 'mongoose';
 import { VALID_PLAYERS, PlayerCode } from '@/models/Game';
 
-// 인성질 멘트
+// 인성질 제보
 export interface IInsungQuote {
   _id?: string;
   content: string;
@@ -10,7 +10,8 @@ export interface IInsungQuote {
   context?: string;          // 상황 메모
   saidAt?: string;           // 발언 날짜 (YYYY-MM-DD, KST)
   registrant: PlayerCode;    // 등록한 사람
-  voteCount: number;         // 비정규화 투표 수
+  voteCount: number;         // 비정규화 득표 수
+  pointTotal?: number;       // 비정규화 받은 포인트 합. 없으면 voteCount로 간주
   createdAt: Date;
 }
 
@@ -22,6 +23,7 @@ const InsungQuoteSchema = new Schema<IInsungQuote>({
   saidAt: { type: String, match: /^\d{4}-\d{2}-\d{2}$/ },
   registrant: { type: String, enum: VALID_PLAYERS, required: true },
   voteCount: { type: Number, default: 0, min: 0 },
+  pointTotal: { type: Number, default: 0, min: 0 },
   createdAt: { type: Date, default: Date.now }
 });
 

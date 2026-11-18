@@ -21,7 +21,7 @@ export const dynamic = 'force-dynamic';
 const DEFAULT_LIMIT = 30;
 const MAX_LIMIT = 100;
 
-// 제보 목록: ?author=&sort=latest|top&limit=&offset=
+// 제보 목록: ?author=&sort=latest|top&voted=me&limit=&offset=
 export async function GET(request: Request) {
   try {
     await dbConnect();
@@ -33,11 +33,17 @@ export async function GET(request: Request) {
 
     if (author && !isValidPlayer(author)) return jsonError('유효하지 않은 주인공입니다.', 400);
 
-    const filter = author ? { author } : {};
+    const me = await getSessionPlayer();
+    const filter: Record<string, unknown> = author ? { author } : {};
+    // ?voted=me: 내가 투표한 제보만
+    if (searchParams.get('voted') === 'me') {
+      if (!me) return jsonError('로그인이 필요합니다.', 401, { requiresLogin: true });
+      filter._id = { $in: await InsungVote.distinct('quoteId', { voter: me }) };
+    }
     const sortSpec: Record<string, 1 | -1> =
       sort === 'top' ? { score: -1, createdAt: 1 } : { createdAt: -1 };
 
-    const [quotes, total, me] = await Promise.all([
+    const [quotes, total] = await Promise.all([
       InsungQuote.aggregate<IInsungQuote>([
         { $match: filter },
         { $addFields: { score: POINT_TOTAL_EXPR } },
@@ -45,8 +51,7 @@ export async function GET(request: Request) {
         { $skip: offset },
         { $limit: limit }
       ]),
-      InsungQuote.countDocuments(filter),
-      getSessionPlayer()
+      InsungQuote.countDocuments(filter)
     ]);
 
     return NextResponse.json({

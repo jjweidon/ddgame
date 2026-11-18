@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { getPlayerDisplayName } from '@/utils/playerNames';
+import Icon from '@/components/Icon';
 import { INSUNG_POINT_MAX, INSUNG_POINT_MIN } from '@/constants/insungPoints';
 
 type PlayerCode = '잡' | '큐' | '지' | '머' | '웅';
@@ -33,7 +34,7 @@ type PointBudget = { month: string; granted: number; carriedOver: number; spent:
 type LeaderboardRow = { player: PlayerCode; score: number; quoteCount: number; rank: number };
 type AuthStatus = { me: PlayerCode | null; players: Array<{ player: PlayerCode; hasPin: boolean }> };
 
-type Tab = 'ranking' | 'latest' | 'top';
+type Tab = 'ranking' | 'top' | 'latest' | 'voted';
 type FeedSort = 'latest' | 'top';
 
 const getKstToday = () => new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
@@ -58,7 +59,7 @@ export default function InsungPage() {
 
   const [tab, setTab] = useState<Tab>('ranking');
   const [authorFilter, setAuthorFilter] = useState<PlayerCode | null>(null);
-  const [feedSort, setFeedSort] = useState<FeedSort>('latest');
+  const [feedSort, setFeedSort] = useState<FeedSort>('top');
 
   const [leaderboard, setLeaderboard] = useState<LeaderboardRow[] | null>(null);
   const [quotes, setQuotes] = useState<Quote[]>([]);
@@ -102,6 +103,9 @@ export default function InsungPage() {
       if (authorFilter) {
         params.set('author', authorFilter);
         params.set('sort', feedSort);
+      } else if (tab === 'voted') {
+        params.set('voted', 'me');
+        params.set('sort', feedSort);
       } else {
         params.set('sort', tab === 'top' ? 'top' : 'latest');
       }
@@ -114,6 +118,12 @@ export default function InsungPage() {
 
   const fetchQuotes = useCallback(
     async (append = false) => {
+      // 내 투표 탭은 로그인해야 볼 수 있음
+      if (tab === 'voted' && !authorFilter && !me) {
+        setQuotes([]);
+        setHasMore(false);
+        return;
+      }
       setQuotesLoading(true);
       const result = await api<{ quotes: Quote[]; hasMore: boolean }>(feedQuery(append ? quotes.length : 0));
       setQuotesLoading(false);
@@ -122,7 +132,7 @@ export default function InsungPage() {
       setQuotes((prev) => (append ? [...prev, ...loaded] : loaded));
       setHasMore(tab === 'top' && !authorFilter ? false : result.data.hasMore);
     },
-    [feedQuery, quotes.length, tab, authorFilter]
+    [feedQuery, quotes.length, tab, authorFilter, me]
   );
 
   const refreshAll = useCallback(async () => {
@@ -251,13 +261,15 @@ export default function InsungPage() {
     if (tab !== 'ranking' || authorFilter) fetchQuotes();
   };
 
+  // 사람별 모음·내 투표는 포인트순이 기본
   const selectTab = (next: Tab) => {
     setAuthorFilter(null);
+    setFeedSort('top');
     setTab(next);
   };
 
   const openAuthor = (player: PlayerCode) => {
-    setFeedSort('latest');
+    setFeedSort('top');
     setAuthorFilter(player);
   };
 
@@ -290,7 +302,7 @@ export default function InsungPage() {
               <span className="flex items-center gap-3">
                 {budget && (
                   <span className="text-foreground" title="이번 달 남은 포인트 / 이번 달 받은 포인트(이월 포함)">
-                    <StarIcon filled className="inline w-4 h-4 -mt-0.5 mr-1 text-warning" />
+                    <Icon name="star" filled className="inline w-4 h-4 -mt-0.5 mr-1 text-warning" />
                     <span className="font-semibold text-accent">{budget.remaining}</span>
                     <span className="text-muted"> / {budget.granted + budget.carriedOver}</span>
                     {budget.carriedOver > 0 && <span className="text-xs text-muted"> (+{budget.carriedOver} 이월)</span>}
@@ -336,9 +348,10 @@ export default function InsungPage() {
               <button
                 type="button"
                 onClick={handlePaste}
-                className="text-xs px-2.5 py-1 rounded-md border border-border text-foreground hover:bg-surface-hover"
+                className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-md border border-border text-foreground hover:bg-surface-hover"
               >
-                📋 붙여넣기
+                <Icon name="clipboard" className="w-3.5 h-3.5" />
+                붙여넣기
               </button>
             </div>
             <textarea
@@ -416,7 +429,7 @@ export default function InsungPage() {
             disabled={submitting}
             className="w-full bg-accent-gradient text-white font-semibold py-3 rounded-lg disabled:opacity-50"
           >
-            {submitting ? '등록 중...' : points > 0 ? `박제하기 (★${points})` : '박제하기'}
+            {submitting ? '등록 중...' : points > 0 ? `박제하기 (+${points}점)` : '박제하기'}
           </button>
         </section>
 
@@ -425,8 +438,9 @@ export default function InsungPage() {
             {(
               [
                 ['ranking', '랭킹'],
+                ['top', 'TOP10'],
                 ['latest', '최신'],
-                ['top', '레전드 TOP']
+                ['voted', '내 투표']
               ] as Array<[Tab, string]>
             ).map(([key, label]) => (
               <button
@@ -444,14 +458,16 @@ export default function InsungPage() {
             ))}
           </div>
 
-          {authorFilter && (
+          {(authorFilter || (tab === 'voted' && me)) && (
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-lg font-semibold text-foreground">{getPlayerDisplayName(authorFilter)}의 인성질 모음</h2>
+              <h2 className="text-lg font-semibold text-foreground">
+                {authorFilter ? `${getPlayerDisplayName(authorFilter)}의 인성질 모음` : '내가 투표한 제보'}
+              </h2>
               <div className="flex gap-1 text-xs">
                 {(
                   [
-                    ['latest', '최신순'],
-                    ['top', '포인트순']
+                    ['top', '포인트순'],
+                    ['latest', '최신순']
                   ] as Array<[FeedSort, string]>
                 ).map(([key, label]) => (
                   <button
@@ -481,13 +497,13 @@ export default function InsungPage() {
                     onClick={() => openAuthor(row.player)}
                     className="w-full bg-surface-hover rounded-lg px-3 py-3 flex items-center justify-between text-left hover:brightness-110"
                   >
-                    <span className="text-sm font-medium text-foreground">
-                      {row.rank === 1 && row.score > 0 ? '👑 ' : ''}
+                    <span className="text-sm font-medium text-foreground inline-flex items-center gap-1">
+                      {row.rank === 1 && row.score > 0 && <Icon name="crown" className="w-4 h-4 text-warning" />}
                       {row.rank}위 {getPlayerDisplayName(row.player)}
                       <span className="text-xs text-muted ml-2">제보 {row.quoteCount}개</span>
                     </span>
-                    <span className="text-xl font-bold text-accent inline-flex items-center">
-                      <span className="mr-2">😈</span>
+                    <span className="text-xl font-bold text-foreground inline-flex items-center gap-1.5">
+                      <Icon name="star" filled className="w-4 h-4 text-warning" />
                       {row.score}
                     </span>
                   </button>
@@ -497,8 +513,21 @@ export default function InsungPage() {
             )
           ) : (
             <div className="space-y-3">
-              {quotes.length === 0 && !quotesLoading && (
-                <p className="text-sm text-muted">아직 등록된 제보가 없습니다.</p>
+              {tab === 'voted' && !authorFilter && !me ? (
+                <p className="text-sm text-muted">
+                  내가 투표한 제보를 보려면{' '}
+                  <button type="button" onClick={() => setLoginOpen(true)} className="text-accent underline">
+                    로그인
+                  </button>
+                  하세요.
+                </p>
+              ) : (
+                quotes.length === 0 &&
+                !quotesLoading && (
+                  <p className="text-sm text-muted">
+                    {tab === 'voted' && !authorFilter ? '아직 투표한 제보가 없습니다.' : '아직 등록된 제보가 없습니다.'}
+                  </p>
+                )
               )}
               {quotes.map((quote, index) => (
                 <QuoteCard
@@ -534,24 +563,6 @@ export default function InsungPage() {
   );
 }
 
-// Tabler Icons "star" (MIT). filled면 내부까지 채움
-function StarIcon({ filled = false, className = '' }: { filled?: boolean; className?: string }) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill={filled ? 'currentColor' : 'none'}
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-      className={className}
-    >
-      <path d="M12 17.75l-6.172 3.245l1.179 -6.873l-5 -4.867l6.9 -1l3.086 -6.253l3.086 6.253l6.9 1l-5 4.867l1.179 6.873z" />
-    </svg>
-  );
-}
-
 // 별점: 누른 칸까지 채워짐. 같은 칸 다시 누르기(취소/0) 처리는 부모가 결정
 function StarRating({
   value,
@@ -582,7 +593,7 @@ function StarRating({
                   : 'text-muted hover:text-warning'
             }`}
           >
-            <StarIcon filled={filled} className="w-5 h-5" />
+            <Icon name="star" filled={filled} className="w-5 h-5" />
           </button>
         );
       })}
@@ -818,7 +829,7 @@ function LoginModal({
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold text-foreground">누구세요?</h2>
           <button type="button" onClick={onClose} className="text-muted hover:text-foreground" aria-label="닫기">
-            ✕
+            <Icon name="close" className="w-5 h-5" />
           </button>
         </div>
 

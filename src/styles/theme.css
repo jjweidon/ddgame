@@ -2,7 +2,7 @@
  * 디자인 토큰 - 유지보수 용이
  * 색상 변경 시 이 파일만 수정하면 전체 앱에 반영됨
  * 
- * 컨셉: 라이트 - 에디토리얼 차콜 / 다크 - 블랙 배경 + 형광 시안 포인트
+ * 컨셉: 뉴트럴 배경 + 코발트 블루 단색 포인트 (라이트/다크 공통)
  */
 
 :root {
@@ -23,10 +23,10 @@
   --token-border: #e8e8e8;
   --token-border-strong: #d1d1d1;
   
-  /* === 포인트/액센트 - 검정에 가까운 차콜 (에디토리얼 미니멀) === */
-  --token-accent: #141414;
-  --token-accent-hover: #262626;
-  --token-accent-muted: #1a1a1a;
+  /* === 포인트/액센트 - 코발트 블루 === */
+  --token-accent: #3d5afe;
+  --token-accent-hover: #2f4ae0;
+  --token-accent-muted: #2a3fc4;
   
   /* === 시맨틱 === */
   --token-success: #059669;
@@ -42,7 +42,7 @@
   --token-lose-bg: #fee2e2;
   
   /* === 포커스 링 === */
-  --token-focus: #141414;
+  --token-focus: #3d5afe;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -63,10 +63,10 @@
     --token-border: #262626;
     --token-border-strong: #404040;
     
-    /* === 포인트/액센트 - 형광 시안 (블랙에서 빛나는, 흰 글자 가독성 확보) === */
-    --token-accent: #06b6d4;
-    --token-accent-hover: #22d3ee;
-    --token-accent-muted: #0891b2;
+    /* === 포인트/액센트 - 코발트 블루 (블랙 배경 대비 약간 밝게, 흰 글자 가독성 확보) === */
+    --token-accent: #4f6ef7;
+    --token-accent-hover: #6b86ff;
+    --token-accent-muted: #3d5afe;
     
     /* === 시맨틱 === */
     --token-success: #34d399;
@@ -82,6 +82,6 @@
     --token-lose-bg: rgba(248, 113, 113, 0.15);
     
     /* === 포커스 링 === */
-    --token-focus: #06b6d4;
+    --token-focus: #6b86ff;
   }
 }

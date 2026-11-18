@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { IGame } from '@/models/Game';
 import { getTeamDisplayOrder } from '@/utils/teamOrder';
+import Icon from '@/components/Icon';
 
 export type SortField = 'index' | 'createdAt';
 export type SortDirection = 'asc' | 'desc';
@@ -327,7 +328,7 @@ const GameHistoryList: React.FC<GameHistoryListProps> = ({
       
       {games.length === 0 && (
         <div className="text-center py-12 bg-surface rounded-lg border border-border">
-          <div className="text-5xl mb-4 opacity-40">🎮</div>
+          <div className="text-5xl mb-4 opacity-40"><Icon name="gamepad" className="inline-block w-[1em] h-[1em]" strokeWidth={1.75} /></div>
           <p className="text-muted font-medium">기록된 게임이 없습니다.</p>
         </div>
       )}

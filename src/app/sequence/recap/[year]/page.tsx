@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { getPlayerDisplayName } from '@/utils/playerNames';
 import { useSlideImageCapture } from '@/components/SlideImageCapture';
+import Icon from '@/components/Icon';
 
 // 기간별 등수 차트 컴포넌트
 const RankChart: React.FC<{
@@ -434,12 +435,12 @@ const generateSlides = (stats: RecapStats): Slide[] => {
     title: `${stats.year}년 Recap`,
     content: (
       <div className="text-center">
-        <div className="text-6xl mb-4">🎮</div>
+        <div className="text-6xl mb-4"><Icon name="gamepad" className="inline-block w-[1em] h-[1em]" strokeWidth={1.75} /></div>
         <div className="text-4xl font-bold mb-2">{stats.totalGames}게임</div>
         <div className="text-xl opacity-80 mb-4">함께한 한 해</div>
         <div className="text-lg opacity-70 mt-6">
           올해도 수고 많았어요!<br />
-          함께한 게임들을 돌아볼까요? 😊
+          함께한 게임들을 돌아볼까요?
         </div>
       </div>
     )
@@ -461,7 +462,7 @@ const generateSlides = (stats: RecapStats): Slide[] => {
     title: `올해는 총 ${stats.totalPeriods}번의 만남이 있었어요`,
     content: (
       <div className="text-center w-full">
-        <div className="text-5xl md:text-7xl mb-4 md:mb-6">📊</div>
+        <div className="text-5xl md:text-7xl mb-4 md:mb-6"><Icon name="chart" className="inline-block w-[1em] h-[1em]" strokeWidth={1.75} /></div>
         <div className="text-3xl md:text-4xl font-bold mb-3 md:mb-4">{stats.totalPeriods}번</div>
         <div className="text-base md:text-lg opacity-80 mb-4 md:mb-6 px-4">
           {`${stats.totalPeriods}번 만나서 ${stats.totalGames}게임을 했어요!`}
@@ -529,7 +530,7 @@ const generateSlides = (stats: RecapStats): Slide[] => {
       title: '올해의 VIP',
       content: (
         <div className="text-center">
-          <div className="text-7xl mb-6">👑</div>
+          <div className="text-7xl mb-6"><Icon name="crown" className="inline-block w-[1em] h-[1em]" strokeWidth={1.75} /></div>
           <div className="text-5xl font-bold mb-4">{getPlayerDisplayName(stats.vipByWinrate.player)}</div>
           <div className="text-3xl mb-2">{stats.vipByWinrate.winrate.toFixed(1)}%</div>
           <div className="text-xl opacity-80 mb-4">
@@ -537,7 +538,7 @@ const generateSlides = (stats: RecapStats): Slide[] => {
           </div>
           <div className="text-lg opacity-70 mt-6">
             {stats.year}년 최고 승률을 기록했어요!<br />
-            축하드려요~! 🎉
+            축하드려요~!
           </div>
         </div>
       )
@@ -551,7 +552,7 @@ const generateSlides = (stats: RecapStats): Slide[] => {
       title: '올해의 꼴찌',
       content: (
         <div className="text-center">
-          <div className="text-7xl mb-6">😅</div>
+          <div className="text-7xl mb-6"><Icon name="moodSad" className="inline-block w-[1em] h-[1em]" strokeWidth={1.75} /></div>
           <div className="text-5xl font-bold mb-4">{getPlayerDisplayName(stats.worstByWinrate.player)}</div>
           <div className="text-3xl mb-2">{stats.worstByWinrate.winrate.toFixed(1)}%</div>
           <div className="text-xl opacity-80 mb-4">
@@ -559,7 +560,7 @@ const generateSlides = (stats: RecapStats): Slide[] => {
           </div>
           <div className="text-lg opacity-70 mt-6">
             {stats.year}년 승률이 아쉬웠지만...<br />
-            다음엔 더 잘할 수 있을 거예요! 화이팅! 💪
+            다음엔 더 잘할 수 있을 거예요! 화이팅!
           </div>
         </div>
       )
@@ -573,7 +574,7 @@ const generateSlides = (stats: RecapStats): Slide[] => {
       title: '최강 팀 조합',
       content: (
         <div className="text-center">
-          <div className="text-7xl mb-6">👑</div>
+          <div className="text-7xl mb-6"><Icon name="crown" className="inline-block w-[1em] h-[1em]" strokeWidth={1.75} /></div>
           <div className="text-5xl font-bold mb-4">{stats.bestWinrateTeam.team}</div>
           <div className="text-3xl mb-2">{stats.bestWinrateTeam.winrate.toFixed(1)}%</div>
           <div className="text-xl opacity-80 mb-4">
@@ -581,7 +582,7 @@ const generateSlides = (stats: RecapStats): Slide[] => {
           </div>
           <div className="text-lg opacity-70 mt-6">
             {stats.year}년 최고 승률을 기록한 팀이에요!<br />
-            정말 완벽한 조합이었네요! 🎯
+            정말 완벽한 조합이었네요!
           </div>
         </div>
       )
@@ -595,7 +596,7 @@ const generateSlides = (stats: RecapStats): Slide[] => {
       title: '최대 연승',
       content: (
         <div className="text-center">
-          <div className="text-7xl mb-6">🔥</div>
+          <div className="text-7xl mb-6"><Icon name="flame" className="inline-block w-[1em] h-[1em]" strokeWidth={1.75} /></div>
           <div className="text-5xl font-bold mb-4">{getPlayerDisplayName(stats.maxWinStreakPlayer.player)}</div>
           <div className="text-4xl mb-2">{stats.maxWinStreakPlayer.maxWinStreak}연승</div>
           <div className="text-xl opacity-80 mb-4">
@@ -619,7 +620,7 @@ const generateSlides = (stats: RecapStats): Slide[] => {
       title: '최장 연승 팀',
       content: (
         <div className="text-center">
-          <div className="text-7xl mb-6">⚡</div>
+          <div className="text-7xl mb-6"><Icon name="bolt" className="inline-block w-[1em] h-[1em]" strokeWidth={1.75} /></div>
           <div className="text-5xl font-bold mb-4">{stats.longestWinStreakTeam.team}</div>
           <div className="text-4xl mb-2">{stats.longestWinStreakTeam.maxWinStreak}연승</div>
           <div className="text-xl opacity-80 mb-4">
@@ -629,7 +630,7 @@ const generateSlides = (stats: RecapStats): Slide[] => {
           </div>
           <div className="text-lg opacity-70 mt-6">
             가장 오래 연승했던 조합이에요!<br />
-            정말 무적이었네요! 🔥
+            정말 무적이었네요!
           </div>
         </div>
       )
@@ -643,7 +644,7 @@ const generateSlides = (stats: RecapStats): Slide[] => {
       title: '최대 연패',
       content: (
         <div className="text-center">
-          <div className="text-7xl mb-6">💔</div>
+          <div className="text-7xl mb-6"><Icon name="heartBroken" className="inline-block w-[1em] h-[1em]" strokeWidth={1.75} /></div>
           <div className="text-5xl font-bold mb-4">{getPlayerDisplayName(stats.maxLoseStreakPlayer.player)}</div>
           <div className="text-4xl mb-2">{stats.maxLoseStreakPlayer.maxLoseStreak}연패</div>
           <div className="text-xl opacity-80 mb-4">
@@ -653,7 +654,7 @@ const generateSlides = (stats: RecapStats): Slide[] => {
           </div>
           <div className="text-lg opacity-70 mt-6">
             다음엔 더 잘할 수 있어요!<br />
-            실패는 성공의 어머니니까요! 💪
+            실패는 성공의 어머니니까요!
           </div>
         </div>
       )
@@ -732,7 +733,7 @@ const generateSlides = (stats: RecapStats): Slide[] => {
         title: biggestRisers.length > 1 ? '순위 상승' : '순위 상승',
         content: (
           <div className="text-center">
-            <div className="text-7xl mb-6">📈</div>
+            <div className="text-7xl mb-6"><Icon name="trendingUp" className="inline-block w-[1em] h-[1em]" strokeWidth={1.75} /></div>
             <div className="text-5xl font-bold mb-4">{getPlayerDisplayName(riser.player)}</div>
             <div className="text-3xl mb-2">
               {riser.worst}위 → {riser.best}위
@@ -743,7 +744,7 @@ const generateSlides = (stats: RecapStats): Slide[] => {
             <div className="text-lg opacity-70 mt-6">
               {fromPeriodNum}번째 만남({fromPeriodRange})에는 {riser.worst}위였는데<br />
               {toPeriodNum}번째 만남({toPeriodRange})에는 {riser.best}위로 올라갔어요!<br />
-              정말 대단한 성장이에요! 🚀
+              정말 대단한 성장이에요!
             </div>
           </div>
         )
@@ -767,7 +768,7 @@ const generateSlides = (stats: RecapStats): Slide[] => {
         title: biggestFallers.length > 1 ? '순위 하락' : '순위 하락',
         content: (
           <div className="text-center">
-            <div className="text-7xl mb-6">📉</div>
+            <div className="text-7xl mb-6"><Icon name="trendingDown" className="inline-block w-[1em] h-[1em]" strokeWidth={1.75} /></div>
             <div className="text-5xl font-bold mb-4">{getPlayerDisplayName(faller.player)}</div>
             <div className="text-3xl mb-2">
               {faller.best}위 → {faller.worst}위
@@ -778,7 +779,7 @@ const generateSlides = (stats: RecapStats): Slide[] => {
             <div className="text-lg opacity-70 mt-6">
               {fromPeriodNum}번째 만남({fromPeriodRange})에는 {faller.best}위였는데<br />
               {toPeriodNum}번째 만남({toPeriodRange})에는 {faller.worst}위로 내려갔어요.<br />
-              다음엔 다시 올라갈 수 있을 거예요! 💪
+              다음엔 다시 올라갈 수 있을 거예요!
             </div>
           </div>
         )
@@ -793,7 +794,7 @@ const generateSlides = (stats: RecapStats): Slide[] => {
       title: '인기 팀 조합',
       content: (
         <div className="text-center">
-          <div className="text-7xl mb-6">🎯</div>
+          <div className="text-7xl mb-6"><Icon name="target" className="inline-block w-[1em] h-[1em]" strokeWidth={1.75} /></div>
           <div className="text-5xl font-bold mb-4">{stats.mostPlayedTeam.team}</div>
           <div className="text-3xl mb-2">{stats.mostPlayedTeam.total}게임</div>
           <div className="text-xl opacity-80 mb-4">
@@ -801,7 +802,7 @@ const generateSlides = (stats: RecapStats): Slide[] => {
           </div>
           <div className="text-lg opacity-70 mt-6">
             가장 많이 함께 플레이한 조합이에요!<br />
-            이 조합이면 안심이 되죠? 😊
+            이 조합이면 안심이 되죠?
           </div>
         </div>
       )
@@ -816,13 +817,13 @@ const generateSlides = (stats: RecapStats): Slide[] => {
       title: '가장 활발한 달',
       content: (
         <div className="text-center">
-          <div className="text-7xl mb-6">📅</div>
+          <div className="text-7xl mb-6"><Icon name="calendar" className="inline-block w-[1em] h-[1em]" strokeWidth={1.75} /></div>
           <div className="text-5xl font-bold mb-4">{monthNames[stats.mostActiveMonth.month]}</div>
           <div className="text-4xl mb-2">{stats.mostActiveMonth.count}게임</div>
           <div className="text-xl opacity-80 mb-4">가장 많은 게임을 한 달</div>
           <div className="text-lg opacity-70 mt-6">
             {monthNames[stats.mostActiveMonth.month]}에 정말 열심히 놀았네요!<br />
-            그때가 가장 즐거웠을 거예요! 🎮
+            그때가 가장 즐거웠을 거예요!
           </div>
         </div>
       )
@@ -844,14 +845,14 @@ const generateSlides = (stats: RecapStats): Slide[] => {
     title: '마무리',
     content: (
       <div className="text-center">
-        <div className="text-7xl mb-6">🎉</div>
+        <div className="text-7xl mb-6"><Icon name="sparkles" className="inline-block w-[1em] h-[1em]" strokeWidth={1.75} /></div>
         <div className="text-4xl font-bold mb-4">수고 많았어요!</div>
         <div className="text-xl opacity-80 mb-6">
           {stats.year}년도 함께 즐겁게 보냈네요
         </div>
         <div className="text-lg opacity-70 mt-6">
           내년에도 싸우지 말고<br />
-          좋은 게임 즐겨봐요! 😊<br />
+          좋은 게임 즐겨봐요!<br />
           <span className="text-base opacity-60 mt-4 block">다음 년도에도 함께해요!</span>
         </div>
       </div>
@@ -1377,7 +1378,7 @@ export default function RecapPage() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900">
         <div className="text-center">
-          <div className="text-6xl mb-4">⚠️</div>
+          <div className="text-6xl mb-4"><Icon name="alert" className="inline-block w-[1em] h-[1em]" strokeWidth={1.75} /></div>
           <p className="text-white text-xl mb-4">{error || '데이터를 불러올 수 없습니다.'}</p>
           <Link
             href="/sequence/hall-of-fame"

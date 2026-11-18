@@ -9,6 +9,7 @@ import PenaltyHistoryModal from '@/components/PenaltyHistoryModal';
 import { IGame } from '@/models/Game';
 import { SortField, SortDirection } from '@/components/GameHistoryList';
 import { getTeamName, getTeamKey } from '@/utils/teamOrder';
+import Icon from '@/components/Icon';
 
 const getValidTeamKey = (team?: string[]): string | null => {
   if (!Array.isArray(team) || team.length !== 2) return null;
@@ -574,7 +575,7 @@ export default function HistoryPage() {
         ) : error ? (
           <div className="flex flex-col items-center justify-center py-20 bg-white dark:bg-neutral-900 rounded-lg 
                         border border-neutral-200 dark:border-neutral-800">
-            <div className="text-6xl mb-4 opacity-40">⚠️</div>
+            <div className="text-6xl mb-4 opacity-40"><Icon name="alert" className="inline-block w-[1em] h-[1em]" strokeWidth={1.75} /></div>
             <p className="text-foreground font-medium text-lg mb-4">{error}</p>
             <button 
               className="px-6 py-3 bg-accent-gradient hover:brightness-110 text-white font-semibold

@@ -10,6 +10,7 @@ import PenaltyModal from '@/components/PenaltyModal';
 import { useStatsStore } from '@/lib/statsStore';
 import { IGame } from '@/models/Game';
 import { RECORD_SUBMISSION_LOCK_MINUTES } from '@/constants/recordSubmission';
+import Icon from '@/components/Icon';
 
 export default function SequencePage() {
   const [winningTeam, setWinningTeam] = useState<string[]>([]);
@@ -265,7 +266,7 @@ export default function SequencePage() {
       {success && (
         <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 animate-fadeIn w-[calc(100%-2rem)] max-w-2xl">
           <div className="bg-emerald-500 dark:bg-emerald-600 border border-emerald-600 dark:border-emerald-700 text-white px-6 py-4 shadow-lg shadow-emerald-500/30 w-full flex items-center justify-center gap-2">
-            <span className="text-xl flex-shrink-0">✅</span>
+            <span className="text-xl flex-shrink-0"><Icon name="check" className="inline-block w-[1em] h-[1em]" strokeWidth={1.75} /></span>
             <span className="text-sm font-medium text-center">{success}</span>
           </div>
         </div>
@@ -459,7 +460,7 @@ export default function SequencePage() {
           className="block w-full px-6 py-4 bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-500 hover:to-orange-600 transition-all duration-200 opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-2"
         >
           <div className="flex items-center justify-center gap-2 text-white font-semibold text-sm">
-            <span className="text-lg">🏆</span>
+            <span className="text-lg"><Icon name="trophy" className="inline-block w-[1em] h-[1em]" strokeWidth={1.75} /></span>
             <span>명예의 전당</span>
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />

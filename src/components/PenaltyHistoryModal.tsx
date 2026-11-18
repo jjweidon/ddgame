@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { IPenalty } from '@/models/Penalty';
 import { getPlayerDisplayName } from '@/utils/playerNames';
+import Icon from '@/components/Icon';
 
 interface PenaltyHistoryModalProps {
   isOpen: boolean;
@@ -245,7 +246,7 @@ const PenaltyHistoryModal: React.FC<PenaltyHistoryModalProps> = ({
             </div>
           ) : error ? (
             <div className="flex flex-col items-center justify-center py-20 px-4">
-              <div className="text-5xl sm:text-6xl mb-4 opacity-40">⚠️</div>
+              <div className="text-5xl sm:text-6xl mb-4 opacity-40"><Icon name="alert" className="inline-block w-[1em] h-[1em]" strokeWidth={1.75} /></div>
               <p className="text-foreground font-medium text-base sm:text-lg mb-4 text-center">{error}</p>
               <button 
                 className="px-4 sm:px-6 py-2.5 sm:py-3 bg-accent-gradient hover:brightness-110 text-white font-semibold text-sm sm:text-base
@@ -258,7 +259,7 @@ const PenaltyHistoryModal: React.FC<PenaltyHistoryModalProps> = ({
             </div>
           ) : penalties.length === 0 ? (
             <div className="text-center py-12">
-              <div className="text-4xl sm:text-5xl mb-4 opacity-40">⚠️</div>
+              <div className="text-4xl sm:text-5xl mb-4 opacity-40"><Icon name="alert" className="inline-block w-[1em] h-[1em]" strokeWidth={1.75} /></div>
               <p className="text-muted font-medium text-sm sm:text-base">패널티 기록이 없습니다.</p>
             </div>
           ) : (

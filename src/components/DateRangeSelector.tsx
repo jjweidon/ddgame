@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import Icon from '@/components/Icon';
 
 interface DateRangeSelectorProps {
   onDateRangeChange: (startDate: string, endDate: string) => void;
@@ -74,7 +75,7 @@ const DateRangeSelector: React.FC<DateRangeSelectorProps> = ({
     >
       <div className="px-5 py-4 border-b border-border">
         <h3 className="text-base font-semibold text-foreground flex items-center gap-2">
-          <span className="text-lg">📅</span>
+          <span className="text-lg"><Icon name="calendar" className="inline-block w-[1em] h-[1em]" strokeWidth={1.75} /></span>
           기간 선택
         </h3>
       </div>

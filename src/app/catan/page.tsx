@@ -9,6 +9,7 @@ import {
   validateCatanCompetitionRankEntries
 } from '@/utils/catanCompetition';
 import { RECORD_SUBMISSION_LOCK_MINUTES } from '@/constants/recordSubmission';
+import Icon from '@/components/Icon';
 
 type PlayerCode = '잡' | '큐' | '지' | '머' | '웅';
 
@@ -463,7 +464,7 @@ export default function CatanPage() {
                       {displayRank}위 {getPlayerDisplayName(player.player)}
                     </span>
                     <span className="text-xl font-bold text-accent inline-flex items-center">
-                      <span className="mr-3">🏆</span>
+                      <span className="mr-3"><Icon name="trophy" className="inline-block w-[1em] h-[1em]" strokeWidth={1.75} /></span>
                       <span>{player.totalPoints}</span>
                     </span>
                   </div>

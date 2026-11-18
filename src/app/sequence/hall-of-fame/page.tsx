@@ -6,6 +6,7 @@ import StatsList from '@/components/StatsList';
 import GameHistoryList from '@/components/GameHistoryList';
 import { IGame } from '@/models/Game';
 import { SortField, SortDirection } from '@/components/GameHistoryList';
+import Icon from '@/components/Icon';
 
 export default function HallOfFamePage() {
   const [selectedYear, setSelectedYear] = useState<number | null>(null);
@@ -191,7 +192,8 @@ export default function HallOfFamePage() {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
               <h1 className="text-2xl sm:text-3xl font-semibold text-foreground flex items-center gap-2">
-                🏆 명예의 전당
+                <Icon name="trophy" className="w-[1em] h-[1em] text-amber-400" strokeWidth={1.75} />
+                명예의 전당
               </h1>
               <p className="text-sm text-muted mt-0.5">
                 연도별 기록과 통계를 확인하세요
@@ -225,7 +227,7 @@ export default function HallOfFamePage() {
         ) : error && !selectedYear ? (
           <div className="flex flex-col items-center justify-center py-20 bg-surface rounded-lg 
                         border border-border">
-            <div className="text-6xl mb-4 opacity-40">⚠️</div>
+            <div className="text-6xl mb-4 opacity-40"><Icon name="alert" className="inline-block w-[1em] h-[1em]" strokeWidth={1.75} /></div>
             <p className="text-foreground font-medium text-lg mb-4">{error}</p>
             <button 
               className="px-6 py-3 bg-accent-gradient hover:brightness-110 text-white font-semibold
@@ -308,7 +310,7 @@ export default function HallOfFamePage() {
                     />
                   ) : (
                     <div className="text-center py-12 bg-surface rounded-lg border border-border">
-                      <div className="text-5xl mb-4 opacity-40">📊</div>
+                      <div className="text-5xl mb-4 opacity-40"><Icon name="chart" className="inline-block w-[1em] h-[1em]" strokeWidth={1.75} /></div>
                       <p className="text-muted font-medium">해당 연도의 통계 데이터가 없습니다.</p>
                     </div>
                   )}
@@ -379,7 +381,7 @@ export default function HallOfFamePage() {
                     />
                   ) : (
                     <div className="text-center py-12 bg-surface rounded-lg border border-border">
-                      <div className="text-5xl mb-4 opacity-40">🎮</div>
+                      <div className="text-5xl mb-4 opacity-40"><Icon name="gamepad" className="inline-block w-[1em] h-[1em]" strokeWidth={1.75} /></div>
                       <p className="text-muted font-medium">해당 연도의 게임 기록이 없습니다.</p>
                     </div>
                   )}

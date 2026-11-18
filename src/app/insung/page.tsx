@@ -10,7 +10,7 @@ type PlayerCode = '잡' | '큐' | '지' | '머' | '웅';
 const PLAYERS: PlayerCode[] = ['잡', '큐', '지', '머', '웅'];
 const PAGE_SIZE = 30;
 const TOP_LIMIT = 10;
-const POINT_OPTIONS = Array.from({ length: INSUNG_POINT_MAX - INSUNG_POINT_MIN + 1 }, (_, i) => INSUNG_POINT_MIN + i);
+const POINT_LEVELS = Array.from({ length: INSUNG_POINT_MAX - INSUNG_POINT_MIN + 1 }, (_, i) => INSUNG_POINT_MIN + i);
 
 type Quote = {
   _id: string;
@@ -355,15 +355,20 @@ export default function InsungPage() {
           </div>
 
           <div>
-            <p className="text-sm text-muted mb-2">
-              몇 포인트를 줄까요? <span className="text-xs">(이번 달 남은 포인트에서 차감, 0은 투표 없이 등록)</span>
-            </p>
-            <PointPicker
-              options={[0, ...POINT_OPTIONS]}
-              selected={points}
-              isDisabled={(value) => value > remaining}
-              onSelect={setPoints}
-            />
+            <p className="text-sm text-muted mb-1">몇 포인트를 줄까요?</p>
+            <div className="flex items-center gap-3">
+              <FlameRating
+                value={points}
+                isOverBudget={(value) => value > remaining}
+                onSelect={(value) => {
+                  // 같은 칸을 다시 누르면 0 (투표 없이 등록)
+                  if (value === points) return setPoints(0);
+                  if (value > remaining) return showError(`포인트가 부족합니다. (이번 달 남은 포인트 ${remaining})`);
+                  setPoints(value);
+                }}
+              />
+              <span className="text-xs text-muted">{points > 0 ? `${points}포인트` : '투표 없이 등록'}</span>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3">
@@ -509,35 +514,40 @@ export default function InsungPage() {
   );
 }
 
-function PointPicker({
-  options = POINT_OPTIONS,
-  selected,
-  isDisabled,
+// 불꽃 별점: 누른 칸까지 채워짐. 같은 칸 다시 누르기(취소/0) 처리는 부모가 결정
+function FlameRating({
+  value,
+  isOverBudget,
   onSelect
 }: {
-  options?: number[];
-  selected: number;
-  isDisabled: (value: number) => boolean;
+  value: number;
+  isOverBudget: (value: number) => boolean;
   onSelect: (value: number) => void;
 }) {
   return (
-    <div className="flex gap-1.5">
-      {options.map((value) => (
-        <button
-          key={value}
-          type="button"
-          onClick={() => onSelect(value)}
-          disabled={isDisabled(value)}
-          aria-pressed={selected === value}
-          className={`w-9 h-8 rounded-md text-sm font-semibold border transition-colors disabled:opacity-30 disabled:cursor-not-allowed ${
-            selected === value
-              ? 'bg-accent-gradient text-white border-transparent'
-              : 'border-border text-foreground hover:bg-surface'
-          }`}
-        >
-          {value}
-        </button>
-      ))}
+    <div className="flex items-center" role="group" aria-label="포인트">
+      {POINT_LEVELS.map((level) => {
+        const filled = level <= value;
+        return (
+          <button
+            key={level}
+            type="button"
+            onClick={() => onSelect(level)}
+            aria-label={`${level}포인트`}
+            aria-pressed={level === value}
+            title={isOverBudget(level) ? '포인트 부족' : `${level}포인트`}
+            className={`w-7 h-7 -mx-0.5 text-lg leading-none transition-transform active:scale-90 ${
+              filled
+                ? ''
+                : isOverBudget(level)
+                  ? 'grayscale opacity-10 cursor-not-allowed'
+                  : 'grayscale opacity-25 hover:opacity-50'
+            }`}
+          >
+            🔥
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -571,22 +581,18 @@ function QuoteCard({
           </p>
           {quote.voters.length > 0 && (
             <p className="text-xs text-muted mt-1">
-              🔥 {quote.voters.map((voter) => `${getPlayerDisplayName(voter.player)} ${voter.points}`).join(' · ')}
+              {quote.voters.map((voter) => `${getPlayerDisplayName(voter.player)} ${voter.points}`).join(' · ')}
             </p>
           )}
         </div>
-        <div className="flex flex-col items-end gap-1 shrink-0">
-          <span className="text-lg font-bold text-accent">🔥 {quote.pointTotal}</span>
-          <span className="text-xs text-muted">{quote.voteCount}명</span>
-          <button type="button" onClick={onDelete} className="text-xs text-muted hover:text-danger mt-1">
-            삭제
-          </button>
-        </div>
+        <button type="button" onClick={onDelete} className="text-xs text-muted hover:text-danger shrink-0">
+          삭제
+        </button>
       </div>
-      <div className="mt-3 flex items-center gap-2 flex-wrap">
-        <PointPicker selected={quote.myPoints} isDisabled={exceedsBudget} onSelect={onVote} />
-        <span className="text-xs text-muted">
-          {quote.myPoints > 0 ? '같은 숫자를 다시 누르면 취소' : '포인트를 골라 투표'}
+      <div className="mt-2 flex items-center justify-between gap-2">
+        <FlameRating value={quote.myPoints} isOverBudget={exceedsBudget} onSelect={onVote} />
+        <span className="text-sm text-muted">
+          <span className="font-semibold text-foreground">{quote.pointTotal}</span>점 · {quote.voteCount}명
         </span>
       </div>
     </div>

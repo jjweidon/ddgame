@@ -1,5 +1,5 @@
 // 인성질 포인트 예산제 (docs/insung-spec.md 12장)
-export const INSUNG_POINT_MONTHLY_GRANT = 20; // 매월 1일(KST) 지급
+export const INSUNG_POINT_MONTHLY_GRANT = 50; // 매월 1일(KST) 지급
 export const INSUNG_POINT_CARRY_OVER_MAX = 10; // 다음 달로 넘어가는 최대 잔액
 export const INSUNG_POINT_MIN = 1;
 export const INSUNG_POINT_MAX = 5;

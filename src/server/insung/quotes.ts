@@ -2,7 +2,7 @@ import { Types } from 'mongoose';
 import InsungQuote, { IInsungQuote } from '@/models/InsungQuote';
 import InsungVote from '@/models/InsungVote';
 import { PlayerCode } from '@/models/Game';
-import { INSUNG_POINT_MAX, INSUNG_POINT_MIN } from '@/constants/insungPoints';
+import { INSUNG_POINT_MAX, INSUNG_POINT_MIN, INSUNG_POINT_START_MONTH } from '@/constants/insungPoints';
 import { getKstMonth, getPointBudget } from '@/server/insung/budget';
 
 export const MAX_CONTENT_LENGTH = 500;
@@ -67,8 +67,10 @@ export async function castVote(
     const previous = existing.points ?? 1;
     if (previous === points) return 'unchanged';
 
-    // 이번 달 투표면 차액만, 지난 투표면 새 점수 전부가 이번 달 예산에서 나감
-    const needed = existing.month === month ? points - previous : points;
+    // 이번 달 투표면 차액만, 지난 투표면 새 점수 전부가 이번 달 예산에서 나감.
+    // 포인트제 이전 투표(month 없음)는 예산 계산과 같게 시작 월 투표로 본다
+    const voteMonth = existing.month ?? INSUNG_POINT_START_MONTH;
+    const needed = voteMonth === month ? points - previous : points;
     const budget = await getPointBudget(voter);
     if (needed > budget.remaining) throw budgetError(budget.remaining);
 

@@ -3,7 +3,56 @@ import mongoose from 'mongoose';
 import dbConnect from '@/lib/mongodb';
 import InsungQuote from '@/models/InsungQuote';
 import { getSessionPlayer, isAdminPassword, jsonError } from '@/server/insung/auth';
-import { deleteQuote } from '@/server/insung/quotes';
+import { deleteQuote, isDuplicateKeyError, parseQuoteFields } from '@/server/insung/quotes';
+
+// 제보 수정: 등록자 본인만. 본문·주인공·상황 메모·발생 날짜 (받은 포인트는 그대로)
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    await dbConnect();
+    const { id } = await params;
+    if (!mongoose.Types.ObjectId.isValid(id)) return jsonError('유효하지 않은 제보 ID입니다.', 400);
+
+    const me = await getSessionPlayer();
+    if (!me) return jsonError('로그인이 필요합니다.', 401, { requiresLogin: true });
+
+    const quote = await InsungQuote.findById(id).select({ registrant: 1 });
+    if (!quote) return jsonError('해당 제보를 찾을 수 없습니다.', 404);
+    if (quote.registrant !== me) return jsonError('본인이 등록한 제보만 수정할 수 있습니다.', 403);
+
+    const parsed = parseQuoteFields(await request.json().catch(() => ({})));
+    if ('error' in parsed) return jsonError(parsed.error, 400);
+    const { context, saidAt, ...rest } = parsed.fields;
+
+    const duplicateError = () =>
+      jsonError('같은 주인공에게 같은 내용의 제보가 이미 있습니다.', 409, { code: 'duplicate_quote' });
+    if (await InsungQuote.exists({ _id: { $ne: id }, normalizedContent: rest.normalizedContent, author: rest.author })) {
+      return duplicateError();
+    }
+
+    try {
+      // 비운 선택 항목은 필드를 지움
+      const unset = { ...(context ? {} : { context: 1 }), ...(saidAt ? {} : { saidAt: 1 }) };
+      await InsungQuote.updateOne(
+        { _id: id },
+        {
+          $set: { ...rest, ...(context ? { context } : {}), ...(saidAt ? { saidAt } : {}) },
+          ...(Object.keys(unset).length ? { $unset: unset } : {})
+        }
+      );
+    } catch (error) {
+      if (isDuplicateKeyError(error)) return duplicateError();
+      throw error;
+    }
+
+    return NextResponse.json({ success: true, message: '제보가 수정되었습니다.' });
+  } catch (error: any) {
+    console.error('인성 제보 수정 오류:', error);
+    return jsonError(error.message || '제보 수정 중 오류가 발생했습니다.', 500);
+  }
+}
 
 // 제보 삭제: 등록자 본인 또는 관리자 비밀번호. 이 제보에 준 포인트는 모두 환불
 export async function DELETE(

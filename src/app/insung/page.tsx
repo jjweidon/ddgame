@@ -26,6 +26,8 @@ type Quote = {
   myPoints: number; // 0이면 투표 안 함
 };
 
+type QuoteEditFields = { content: string; author: PlayerCode; context: string; saidAt: string };
+
 type PointBudget = { month: string; granted: number; carriedOver: number; spent: number; remaining: number };
 
 type LeaderboardRow = { player: PlayerCode; score: number; quoteCount: number; rank: number };
@@ -199,6 +201,21 @@ export default function InsungPage() {
     });
     if (!result.ok) showError(result.error);
     refreshAll();
+  };
+
+  const handleEdit = async (quote: Quote, fields: QuoteEditFields) => {
+    setMessage(null);
+    const result = await api(`/api/insung/quotes/${quote._id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(fields)
+    });
+    if (!result.ok) {
+      showError(result.error);
+      return false;
+    }
+    showSuccess('제보가 수정되었습니다.');
+    refreshAll();
+    return true;
   };
 
   const handleDelete = async (quote: Quote) => {
@@ -489,7 +506,9 @@ export default function InsungPage() {
                   quote={quote}
                   remaining={remaining}
                   rankLabel={tab === 'top' && !authorFilter ? `${index + 1}` : undefined}
+                  isMine={me !== null && me === quote.registrant}
                   onVote={(selected) => handleVote(quote, selected)}
+                  onEdit={(fields) => handleEdit(quote, fields)}
                   onDelete={() => handleDelete(quote)}
                 />
               ))}
@@ -575,17 +594,113 @@ function QuoteCard({
   quote,
   remaining,
   rankLabel,
+  isMine,
   onVote,
+  onEdit,
   onDelete
 }: {
   quote: Quote;
   remaining: number;
   rankLabel?: string;
+  isMine: boolean;
   onVote: (points: number) => void;
+  onEdit: (fields: QuoteEditFields) => Promise<boolean>;
   onDelete: () => void;
 }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState<QuoteEditFields | null>(null);
+  const [saving, setSaving] = useState(false);
+
   // 점수를 바꿀 때 필요한 포인트는 서버가 최종 판단 (지난달 투표는 새 점수 전부 차감)
   const exceedsBudget = (value: number) => value - quote.myPoints > remaining;
+
+  const startEdit = () => {
+    setDraft({
+      content: quote.content,
+      author: quote.author,
+      context: quote.context ?? '',
+      saidAt: quote.saidAt ?? ''
+    });
+    setEditing(true);
+  };
+
+  const saveEdit = async () => {
+    if (!draft) return;
+    setSaving(true);
+    const ok = await onEdit(draft);
+    setSaving(false);
+    if (ok) setEditing(false);
+  };
+
+  if (editing && draft) {
+    const inputClass =
+      'w-full rounded-lg border border-border bg-page px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-focus';
+    return (
+      <div className="bg-surface-hover rounded-lg px-4 py-3 space-y-3">
+        <textarea
+          value={draft.content}
+          onChange={(e) => setDraft({ ...draft, content: e.target.value })}
+          maxLength={500}
+          rows={3}
+          aria-label="본문"
+          className={inputClass}
+        />
+        <div className="grid grid-cols-5 gap-1.5">
+          {PLAYERS.map((player) => (
+            <button
+              key={player}
+              type="button"
+              onClick={() => setDraft({ ...draft, author: player })}
+              className={`py-1.5 rounded-md text-xs font-semibold border transition-colors ${
+                draft.author === player
+                  ? 'border-accent text-accent'
+                  : 'border-border text-foreground hover:bg-surface'
+              }`}
+            >
+              {getPlayerDisplayName(player)}
+            </button>
+          ))}
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-2">
+          <input
+            type="text"
+            value={draft.context}
+            onChange={(e) => setDraft({ ...draft, context: e.target.value })}
+            maxLength={100}
+            placeholder="상황 메모 (선택)"
+            className={inputClass}
+          />
+          <input
+            type="date"
+            value={draft.saidAt}
+            max={getKstToday()}
+            onChange={(e) => setDraft({ ...draft, saidAt: e.target.value })}
+            onClick={(e) => e.currentTarget.showPicker?.()}
+            aria-label="발생 날짜"
+            className={`${inputClass} sm:w-44 cursor-pointer`}
+          />
+        </div>
+        <div className="flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={() => setEditing(false)}
+            className="px-3 py-1.5 rounded-md text-sm border border-border text-foreground hover:bg-surface"
+          >
+            취소
+          </button>
+          <button
+            type="button"
+            onClick={saveEdit}
+            disabled={saving}
+            className="px-3 py-1.5 rounded-md text-sm font-semibold border border-accent text-accent hover:bg-surface disabled:opacity-50"
+          >
+            {saving ? '저장 중...' : '저장'}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-surface-hover rounded-lg px-4 py-3">
       <div className="flex items-start gap-3">
@@ -604,9 +719,21 @@ function QuoteCard({
             </p>
           )}
         </div>
-        <button type="button" onClick={onDelete} className="text-xs text-muted hover:text-danger shrink-0">
-          삭제
-        </button>
+        <div className="flex gap-2 shrink-0 text-xs">
+          {isMine && (
+            <button type="button" onClick={startEdit} className="text-muted hover:text-accent">
+              수정
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={onDelete}
+            title={isMine ? '삭제' : '관리자 비밀번호로 삭제'}
+            className="text-muted hover:text-danger"
+          >
+            삭제
+          </button>
+        </div>
       </div>
       <div className="mt-2 flex items-center justify-between gap-2">
         <StarRating value={quote.myPoints} isOverBudget={exceedsBudget} onSelect={onVote} />

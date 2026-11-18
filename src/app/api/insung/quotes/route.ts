@@ -8,14 +8,11 @@ import { INSUNG_POINT_MAX, INSUNG_POINT_MIN } from '@/constants/insungPoints';
 import { getPointBudget } from '@/server/insung/budget';
 import {
   castVote,
-  getKstToday,
   InsungVoteError,
-  isValidPoints,
-  POINT_TOTAL_EXPR,
   isDuplicateKeyError,
-  MAX_CONTENT_LENGTH,
-  MAX_CONTEXT_LENGTH,
-  normalizeContent,
+  isValidPoints,
+  parseQuoteFields,
+  POINT_TOTAL_EXPR,
   withVoters
 } from '@/server/insung/quotes';
 
@@ -85,31 +82,14 @@ export async function POST(request: Request) {
     if (!me) return jsonError('로그인이 필요합니다.', 401, { requiresLogin: true });
 
     const body = await request.json();
-    const content = typeof body.content === 'string' ? body.content.trim() : '';
-    const context = typeof body.context === 'string' ? body.context.trim() : '';
-    const saidAt = typeof body.saidAt === 'string' && body.saidAt ? body.saidAt : undefined;
-    const { author } = body;
+    const parsed = parseQuoteFields(body);
+    if ('error' in parsed) return jsonError(parsed.error, 400);
+    const { content, normalizedContent, author, context, saidAt } = parsed.fields;
     const points = body.points ?? INSUNG_POINT_MIN;
-
-    if (!content) return jsonError('무슨 말이나 행동을 했는지 입력하세요.', 400);
-    if (content.length > MAX_CONTENT_LENGTH) {
-      return jsonError(`본문은 ${MAX_CONTENT_LENGTH}자 이하여야 합니다.`, 400);
-    }
-    if (!isValidPlayer(author)) return jsonError('누가 했는지 선택하세요.', 400);
     if (points !== 0 && !isValidPoints(points)) {
       return jsonError(`포인트는 0~${INSUNG_POINT_MAX} 사이여야 합니다.`, 400);
     }
-    if (context.length > MAX_CONTEXT_LENGTH) {
-      return jsonError(`상황 메모는 ${MAX_CONTEXT_LENGTH}자 이하여야 합니다.`, 400);
-    }
-    if (saidAt !== undefined) {
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(saidAt) || Number.isNaN(Date.parse(saidAt))) {
-        return jsonError('발생 날짜 형식이 올바르지 않습니다.', 400);
-      }
-      if (saidAt > getKstToday()) return jsonError('발생 날짜는 미래일 수 없습니다.', 400);
-    }
 
-    const normalizedContent = normalizeContent(content);
     const existing = await InsungQuote.findOne({ normalizedContent, author }).lean<IInsungQuote>();
     if (existing) {
       return NextResponse.json({ success: true, data: await mergeIntoExisting(existing, me, points) });
@@ -131,7 +111,7 @@ export async function POST(request: Request) {
         content,
         normalizedContent,
         author,
-        context: context || undefined,
+        context,
         saidAt,
         registrant: me,
         voteCount: 0,

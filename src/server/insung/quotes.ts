@@ -4,6 +4,7 @@ import InsungVote from '@/models/InsungVote';
 import { PlayerCode } from '@/models/Game';
 import { INSUNG_POINT_MAX, INSUNG_POINT_MIN, INSUNG_POINT_START_MONTH } from '@/constants/insungPoints';
 import { getKstMonth, getPointBudget } from '@/server/insung/budget';
+import { isValidPlayer } from '@/server/insung/auth';
 
 export const MAX_CONTENT_LENGTH = 500;
 export const MAX_CONTEXT_LENGTH = 100;
@@ -16,6 +17,43 @@ export const isDuplicateKeyError = (error: unknown) =>
 /** KST 기준 오늘 날짜 (YYYY-MM-DD) */
 export const getKstToday = () =>
   new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
+
+export type QuoteFields = {
+  content: string;
+  normalizedContent: string;
+  author: PlayerCode;
+  context?: string;
+  saidAt?: string;
+};
+
+/** 등록·수정 공용 입력 검증. 실패하면 error 메시지 */
+export function parseQuoteFields(body: Record<string, unknown>): { fields: QuoteFields } | { error: string } {
+  const content = typeof body.content === 'string' ? body.content.trim() : '';
+  const context = typeof body.context === 'string' ? body.context.trim() : '';
+  const saidAt = typeof body.saidAt === 'string' && body.saidAt ? body.saidAt : undefined;
+  const { author } = body;
+
+  if (!content) return { error: '무슨 말이나 행동을 했는지 입력하세요.' };
+  if (content.length > MAX_CONTENT_LENGTH) return { error: `본문은 ${MAX_CONTENT_LENGTH}자 이하여야 합니다.` };
+  if (!isValidPlayer(author)) return { error: '누가 했는지 선택하세요.' };
+  if (context.length > MAX_CONTEXT_LENGTH) return { error: `상황 메모는 ${MAX_CONTEXT_LENGTH}자 이하여야 합니다.` };
+  if (saidAt !== undefined) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(saidAt) || Number.isNaN(Date.parse(saidAt))) {
+      return { error: '발생 날짜 형식이 올바르지 않습니다.' };
+    }
+    if (saidAt > getKstToday()) return { error: '발생 날짜는 미래일 수 없습니다.' };
+  }
+
+  return {
+    fields: {
+      content,
+      normalizedContent: normalizeContent(content),
+      author,
+      context: context || undefined,
+      saidAt
+    }
+  };
+}
 
 export const isValidPoints = (value: unknown): value is number =>
   Number.isInteger(value) && (value as number) >= INSUNG_POINT_MIN && (value as number) <= INSUNG_POINT_MAX;

@@ -66,11 +66,13 @@
 - 이미 투표했거나 본인이 주인공이면 → "이미 등록된 제보예요" 안내
 - `normalizedContent + author` 조합에 unique 인덱스를 둬서 동시 등록 경쟁도 막음
 
-## 5. 삭제·취소
+## 5. 수정·삭제·취소
 
 | 동작 | 권한 |
 |---|---|
 | 투표 취소 | 투표한 본인 (👍 다시 누르면 토글) |
+| 제보 수정 | **등록자 본인만.** 본문·주인공·상황 메모·발생 날짜를 바꿀 수 있음. 받은 포인트·투표는 그대로 (주인공을 바꾸면 점수도 새 주인공에게 이동) |
+| 수정 중복 | 다른 제보와 주인공 + 정규화 본문이 같아지면 409 |
 | 제보 삭제 | 등록자 본인, 또는 관리자 비밀번호 입력 |
 | 제보 삭제 시 | 그 제보의 투표도 함께 삭제 (점수에서 빠짐) |
 
@@ -110,6 +112,7 @@ InsungVote   { quoteId, voter: PlayerCode, createdAt }
 | POST | `/api/insung/auth/reset` | 관리자 비번 | `{player, adminPassword}` PIN 삭제 + pinVersion 증가 |
 | GET | `/api/insung/quotes?author=&sort=latest\|top&limit=&offset=` | - | 피드/TOP/사람별 (voters 포함) |
 | POST | `/api/insung/quotes` | 세션 | 등록 (+자동 투표, 중복 병합). 결과: `created` / `merged` / `duplicate` |
+| PATCH | `/api/insung/quotes/[id]` | 세션(등록자) | `{content, author, context, saidAt}` 수정. 등록과 같은 검증, 빈 선택 항목은 삭제. 중복 409 `duplicate_quote` |
 | DELETE | `/api/insung/quotes/[id]` | 세션(등록자) 또는 `{adminPassword}` | 제보와 투표 삭제 |
 | POST | `/api/insung/quotes/[id]/vote` | 세션 | 투표 (본인이 주인공이면 403, 이미 투표했으면 409) |
 | DELETE | `/api/insung/quotes/[id]/vote` | 세션 | 투표 취소 |
@@ -218,3 +221,9 @@ v0.2의 "본인이 주인공인 제보 투표 불가(403)"와 "자수는 0점 �
 - 이월 상한 10포인트, 포인트제 시작 월 `2026-11`
 - 기존 투표는 1포인트씩 시작 월 할당량에서 차감
 - 투표 잠금·본인 투표 금지 없음, 0표 등록 허용
+
+## 13. 제보 수정 (v0.3.1)
+
+- 내가 등록한 제보 카드에만 **수정** 버튼이 보이고, 누르면 카드 안에서 바로 편집한다 (본문·주인공·상황 메모·발생 날짜)
+- 삭제 버튼은 모든 카드에 보인다. 내 제보는 확인 후 바로 삭제, 남의 제보는 관리자 비밀번호를 입력해야 삭제
+

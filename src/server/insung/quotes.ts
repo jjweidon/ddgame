@@ -2,8 +2,8 @@ import { Types } from 'mongoose';
 import InsungQuote, { IInsungQuote } from '@/models/InsungQuote';
 import InsungVote from '@/models/InsungVote';
 import { PlayerCode } from '@/models/Game';
-import { INSUNG_POINT_MAX, INSUNG_POINT_MIN, INSUNG_POINT_START_MONTH } from '@/constants/insungPoints';
-import { getKstMonth, getPointBudget } from '@/server/insung/budget';
+import { INSUNG_POINT_MAX, INSUNG_POINT_MIN } from '@/constants/insungPoints';
+import { getKstMonth, getPointBudget, PointBudget } from '@/server/insung/budget';
 import { isValidPlayer } from '@/server/insung/auth';
 
 export const MAX_CONTENT_LENGTH = 500;
@@ -83,37 +83,27 @@ export async function recalcQuoteTotals(quoteId: string) {
   );
 }
 
-/** 저장 후 잔액이 음수면(동시 요청) 되돌리기 위해 다시 확인 */
-async function isOverBudget(voter: PlayerCode) {
-  return (await getPointBudget(voter)).remaining < 0;
-}
+export type CastVoteResult = {
+  status: 'created' | 'changed' | 'unchanged';
+  budget: PointBudget;
+};
 
 /**
  * 투표하거나, 이미 투표했으면 점수를 바꿈.
  * 지난달(또는 포인트제 이전) 투표의 점수를 바꾸면 이번 달 투표로 옮겨 이번 달 예산에서 전부 차감한다.
- * @returns 새 투표면 'created', 점수 변경이면 'changed', 같은 점수면 'unchanged'
+ * 먼저 저장하고 잔액을 한 번만 계산해서, 음수면(잔액 부족·동시 요청) 되돌린다.
  */
-export async function castVote(
-  quoteId: string,
-  voter: PlayerCode,
-  points: number
-): Promise<'created' | 'changed' | 'unchanged'> {
+export async function castVote(quoteId: string, voter: PlayerCode, points: number): Promise<CastVoteResult> {
   const month = getKstMonth();
   const existing = await InsungVote.findOne({ quoteId, voter });
 
   if (existing) {
     const previous = existing.points ?? 1;
-    if (previous === points) return 'unchanged';
-
-    // 이번 달 투표면 차액만, 지난 투표면 새 점수 전부가 이번 달 예산에서 나감.
-    // 포인트제 이전 투표(month 없음)는 예산 계산과 같게 시작 월 투표로 본다
-    const voteMonth = existing.month ?? INSUNG_POINT_START_MONTH;
-    const needed = voteMonth === month ? points - previous : points;
-    const budget = await getPointBudget(voter);
-    if (needed > budget.remaining) throw budgetError(budget.remaining);
+    if (previous === points) return { status: 'unchanged', budget: await getPointBudget(voter) };
 
     await InsungVote.updateOne({ _id: existing._id }, { $set: { points, month } });
-    if (await isOverBudget(voter)) {
+    const budget = await getPointBudget(voter);
+    if (budget.remaining < 0) {
       const restore = existing.month
         ? { $set: { points: previous, month: existing.month } }
         : { $set: { points: previous }, $unset: { month: 1 } };
@@ -121,11 +111,8 @@ export async function castVote(
       throw budgetError((await getPointBudget(voter)).remaining);
     }
     await recalcQuoteTotals(quoteId);
-    return 'changed';
+    return { status: 'changed', budget };
   }
-
-  const budget = await getPointBudget(voter);
-  if (points > budget.remaining) throw budgetError(budget.remaining);
 
   let created;
   try {
@@ -135,12 +122,13 @@ export async function castVote(
     if (isDuplicateKeyError(error)) return castVote(quoteId, voter, points);
     throw error;
   }
-  if (await isOverBudget(voter)) {
+  const budget = await getPointBudget(voter);
+  if (budget.remaining < 0) {
     await InsungVote.deleteOne({ _id: created._id });
-    throw budgetError((await getPointBudget(voter)).remaining);
+    throw budgetError(budget.remaining + points);
   }
   await recalcQuoteTotals(quoteId);
-  return 'created';
+  return { status: 'created', budget };
 }
 
 /** 투표 취소. 언제 한 투표든 취소 가능하며, 포인트는 투표했던 달로 돌아감. @returns 취소된 투표가 있으면 true */

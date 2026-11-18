@@ -1,14 +1,18 @@
 import { NextResponse } from 'next/server';
 import mongoose from 'mongoose';
 import dbConnect from '@/lib/mongodb';
-import InsungQuote from '@/models/InsungQuote';
+import InsungQuote, { IInsungQuote } from '@/models/InsungQuote';
+import { PlayerCode } from '@/models/Game';
 import { getSessionPlayer, jsonError } from '@/server/insung/auth';
 import {
   castVote,
   InsungVoteError,
   isValidPoints,
-  removeVote
+  removeVote,
+  withVoters
 } from '@/server/insung/quotes';
+import { getPointBudget, PointBudget } from '@/server/insung/budget';
+import { enforceWriteRateLimit } from '@/server/insung/rateLimit';
 import { INSUNG_POINT_MAX, INSUNG_POINT_MIN } from '@/constants/insungPoints';
 
 type RouteContext = { params: Promise<{ id: string }> };
@@ -22,9 +26,19 @@ async function resolveVoteRequest({ params }: RouteContext) {
   const me = await getSessionPlayer();
   if (!me) return { error: jsonError('로그인이 필요합니다.', 401, { requiresLogin: true }) };
 
+  const limited = await enforceWriteRateLimit(me);
+  if (limited) return { error: limited };
+
   const quote = await InsungQuote.exists({ _id: id });
   if (!quote) return { error: jsonError('해당 제보를 찾을 수 없습니다.', 404) };
   return { id, me };
+}
+
+/** 화면이 목록·잔액을 다시 부르지 않도록 바뀐 제보와 잔액을 함께 돌려줌 */
+async function voteResponse(id: string, me: PlayerCode, budget: PointBudget, extra: Record<string, unknown> = {}) {
+  const quote = await InsungQuote.findById(id).lean<IInsungQuote>();
+  const [withVotes] = quote ? await withVoters([quote], me) : [null];
+  return NextResponse.json({ success: true, data: { ...extra, quote: withVotes, budget } });
 }
 
 const voteErrorResponse = (error: unknown, fallback: string) => {
@@ -46,8 +60,8 @@ export async function POST(request: Request, context: RouteContext) {
       return jsonError(`포인트는 ${INSUNG_POINT_MIN}~${INSUNG_POINT_MAX} 사이여야 합니다.`, 400);
     }
 
-    const status = await castVote(id, me, points);
-    return NextResponse.json({ success: true, data: { status } });
+    const { status, budget } = await castVote(id, me, points);
+    return voteResponse(id, me, budget, { status });
   } catch (error) {
     return voteErrorResponse(error, '투표 중 오류가 발생했습니다.');
   }
@@ -62,7 +76,7 @@ export async function DELETE(_request: Request, context: RouteContext) {
 
     if (!(await removeVote(id, me))) return jsonError('투표하지 않은 제보입니다.', 404);
 
-    return NextResponse.json({ success: true });
+    return voteResponse(id, me, await getPointBudget(me));
   } catch (error) {
     return voteErrorResponse(error, '투표 취소 중 오류가 발생했습니다.');
   }

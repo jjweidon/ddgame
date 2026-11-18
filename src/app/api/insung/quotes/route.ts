@@ -6,6 +6,7 @@ import { PlayerCode } from '@/models/Game';
 import { getSessionPlayer, isValidPlayer, jsonError } from '@/server/insung/auth';
 import { INSUNG_POINT_MAX, INSUNG_POINT_MIN } from '@/constants/insungPoints';
 import { getPointBudget } from '@/server/insung/budget';
+import { enforceWriteRateLimit } from '@/server/insung/rateLimit';
 import {
   castVote,
   InsungVoteError,
@@ -85,6 +86,8 @@ export async function POST(request: Request) {
     await dbConnect();
     const me = await getSessionPlayer();
     if (!me) return jsonError('로그인이 필요합니다.', 401, { requiresLogin: true });
+    const limited = await enforceWriteRateLimit(me);
+    if (limited) return limited;
 
     const body = await request.json();
     const parsed = parseQuoteFields(body);

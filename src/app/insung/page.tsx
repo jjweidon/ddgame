@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { getPlayerDisplayName } from '@/utils/playerNames';
 import Icon from '@/components/Icon';
@@ -11,6 +11,7 @@ type PlayerCode = '잡' | '큐' | '지' | '머' | '웅';
 const PLAYERS: PlayerCode[] = ['잡', '큐', '지', '머', '웅'];
 const PAGE_SIZE = 30;
 const TOP_LIMIT = 10;
+const VOTE_DEBOUNCE_MS = 600; // 별 연타는 마지막 값만 서버로 보냄
 const POINT_LEVELS = Array.from({ length: INSUNG_POINT_MAX - INSUNG_POINT_MIN + 1 }, (_, i) => INSUNG_POINT_MIN + i);
 
 type Quote = {
@@ -201,16 +202,58 @@ export default function InsungPage() {
   };
 
   // 같은 점수를 다시 누르면 취소, 다른 점수면 투표·변경
-  const handleVote = async (quote: Quote, selected: number) => {
-    setMessage(null);
-    if (!requireLogin()) return;
-    const cancel = quote.myPoints === selected;
-    const result = await api(`/api/insung/quotes/${quote._id}/vote`, {
+  // 제보별로 연타 중인 투표: 처음 누르기 전 상태와 전송 타이머
+  const pendingVotes = useRef(new Map<string, { original: Quote; timer: ReturnType<typeof setTimeout> }>());
+
+  const replaceQuote = (next: Quote) =>
+    setQuotes((prev) => prev.map((quote) => (quote._id === next._id ? next : quote)));
+
+  const flushVote = async (quoteId: string, nextPoints: number) => {
+    const pending = pendingVotes.current.get(quoteId);
+    pendingVotes.current.delete(quoteId);
+    if (!pending || pending.original.myPoints === nextPoints) return; // 원래 점수로 돌아왔으면 요청 안 함
+
+    const cancel = nextPoints === 0;
+    const result = await api<{ quote: Quote | null; budget: PointBudget }>(`/api/insung/quotes/${quoteId}/vote`, {
       method: cancel ? 'DELETE' : 'POST',
-      body: cancel ? undefined : JSON.stringify({ points: selected })
+      body: cancel ? undefined : JSON.stringify({ points: nextPoints })
     });
-    if (!result.ok) showError(result.error);
-    refreshAll();
+    if (!result.ok || !result.data) {
+      showError(result.error);
+      replaceQuote(pending.original);
+      fetchBudget();
+      return;
+    }
+    if (result.data.quote) replaceQuote(result.data.quote);
+    setBudget(result.data.budget);
+  };
+
+  // 누르면 화면에 바로 반영하고, 연타가 끝나면 마지막 값만 전송. 같은 칸을 다시 누르면 취소
+  const handleVote = (quote: Quote, selected: number) => {
+    setMessage(null);
+    if (!requireLogin() || !me) return;
+    const nextPoints = quote.myPoints === selected ? 0 : selected;
+    const delta = nextPoints - quote.myPoints;
+    if (budget && delta > budget.remaining) {
+      return showError(`포인트가 부족합니다. (이번 달 남은 포인트 ${budget.remaining})`);
+    }
+
+    const pending = pendingVotes.current.get(quote._id);
+    if (pending) clearTimeout(pending.timer);
+    pendingVotes.current.set(quote._id, {
+      original: pending?.original ?? quote,
+      timer: setTimeout(() => flushVote(quote._id, nextPoints), VOTE_DEBOUNCE_MS)
+    });
+
+    const voters = quote.voters.filter((voter) => voter.player !== me);
+    replaceQuote({
+      ...quote,
+      myPoints: nextPoints,
+      pointTotal: quote.pointTotal + delta,
+      voteCount: voters.length + (nextPoints > 0 ? 1 : 0),
+      voters: nextPoints > 0 ? [...voters, { player: me, points: nextPoints }] : voters
+    });
+    setBudget((prev) => (prev ? { ...prev, spent: prev.spent + delta, remaining: prev.remaining - delta } : prev));
   };
 
   const handleEdit = async (quote: Quote, fields: QuoteEditFields) => {
@@ -263,6 +306,8 @@ export default function InsungPage() {
 
   // 사람별 모음·내 투표는 포인트순이 기본
   const selectTab = (next: Tab) => {
+    // 투표는 랭킹을 다시 부르지 않으므로 랭킹 탭으로 올 때 갱신
+    if (next === 'ranking') fetchLeaderboard();
     setAuthorFilter(null);
     setFeedSort('top');
     setTab(next);

@@ -4,6 +4,7 @@ import dbConnect from '@/lib/mongodb';
 import InsungQuote from '@/models/InsungQuote';
 import { getSessionPlayer, isAdminPassword, jsonError } from '@/server/insung/auth';
 import { deleteQuote, isDuplicateKeyError, parseQuoteFields } from '@/server/insung/quotes';
+import { enforceWriteRateLimit } from '@/server/insung/rateLimit';
 
 // 제보 수정: 등록자 본인만. 본문·주인공·상황 메모·발생 날짜 (받은 포인트는 그대로)
 export async function PATCH(
@@ -17,6 +18,8 @@ export async function PATCH(
 
     const me = await getSessionPlayer();
     if (!me) return jsonError('로그인이 필요합니다.', 401, { requiresLogin: true });
+    const limited = await enforceWriteRateLimit(me);
+    if (limited) return limited;
 
     const quote = await InsungQuote.findById(id).select({ registrant: 1 });
     if (!quote) return jsonError('해당 제보를 찾을 수 없습니다.', 404);
@@ -69,6 +72,10 @@ export async function DELETE(
     if (!quote) return jsonError('해당 제보를 찾을 수 없습니다.', 404);
 
     const me = await getSessionPlayer();
+    if (me) {
+      const limited = await enforceWriteRateLimit(me);
+      if (limited) return limited;
+    }
     const isRegistrant = me !== null && quote.registrant === me;
     if (!isRegistrant && !isAdminPassword(body.adminPassword)) {
       return jsonError('등록자 본인이거나 관리자 비밀번호가 필요합니다.', 403, { requiresAdmin: true });

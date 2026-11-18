@@ -273,7 +273,8 @@ export default function InsungPage() {
               <span className="flex items-center gap-3">
                 {budget && (
                   <span className="text-foreground" title="이번 달 남은 포인트 / 이번 달 받은 포인트(이월 포함)">
-                    🔥 <span className="font-semibold text-accent">{budget.remaining}</span>
+                    <StarIcon filled className="inline w-4 h-4 -mt-0.5 mr-1 text-warning" />
+                    <span className="font-semibold text-accent">{budget.remaining}</span>
                     <span className="text-muted"> / {budget.granted + budget.carriedOver}</span>
                     {budget.carriedOver > 0 && <span className="text-xs text-muted"> (+{budget.carriedOver} 이월)</span>}
                   </span>
@@ -357,7 +358,7 @@ export default function InsungPage() {
           <div>
             <p className="text-sm text-muted mb-1">몇 포인트를 줄까요?</p>
             <div className="flex items-center gap-3">
-              <FlameRating
+              <StarRating
                 value={points}
                 isOverBudget={(value) => value > remaining}
                 onSelect={(value) => {
@@ -398,7 +399,7 @@ export default function InsungPage() {
             disabled={submitting}
             className="w-full bg-accent-gradient text-white font-semibold py-3 rounded-lg disabled:opacity-50"
           >
-            {submitting ? '등록 중...' : points > 0 ? `박제하기 (🔥${points})` : '박제하기'}
+            {submitting ? '등록 중...' : points > 0 ? `박제하기 (★${points})` : '박제하기'}
           </button>
         </section>
 
@@ -514,8 +515,26 @@ export default function InsungPage() {
   );
 }
 
-// 불꽃 별점: 누른 칸까지 채워짐. 같은 칸 다시 누르기(취소/0) 처리는 부모가 결정
-function FlameRating({
+// Tabler Icons "star" (MIT). filled면 내부까지 채움
+function StarIcon({ filled = false, className = '' }: { filled?: boolean; className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill={filled ? 'currentColor' : 'none'}
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      className={className}
+    >
+      <path d="M12 17.75l-6.172 3.245l1.179 -6.873l-5 -4.867l6.9 -1l3.086 -6.253l3.086 6.253l6.9 1l-5 4.867l1.179 6.873z" />
+    </svg>
+  );
+}
+
+// 별점: 누른 칸까지 채워짐. 같은 칸 다시 누르기(취소/0) 처리는 부모가 결정
+function StarRating({
   value,
   isOverBudget,
   onSelect
@@ -525,7 +544,7 @@ function FlameRating({
   onSelect: (value: number) => void;
 }) {
   return (
-    <div className="flex items-center" role="group" aria-label="포인트">
+    <div className="flex items-center gap-0.5" role="group" aria-label="포인트">
       {POINT_LEVELS.map((level) => {
         const filled = level <= value;
         return (
@@ -535,16 +554,16 @@ function FlameRating({
             onClick={() => onSelect(level)}
             aria-label={`${level}포인트`}
             aria-pressed={level === value}
-            title={isOverBudget(level) ? '포인트 부족' : `${level}포인트`}
-            className={`w-7 h-7 -mx-0.5 text-lg leading-none transition-transform active:scale-90 ${
+            title={isOverBudget(level) && !filled ? '포인트 부족' : `${level}포인트`}
+            className={`w-7 h-7 flex items-center justify-center transition-transform active:scale-90 ${
               filled
-                ? ''
+                ? 'text-warning'
                 : isOverBudget(level)
-                  ? 'grayscale opacity-10 cursor-not-allowed'
-                  : 'grayscale opacity-25 hover:opacity-50'
+                  ? 'text-muted opacity-30 cursor-not-allowed'
+                  : 'text-muted hover:text-warning'
             }`}
           >
-            🔥
+            <StarIcon filled={filled} className="w-5 h-5" />
           </button>
         );
       })}
@@ -590,7 +609,7 @@ function QuoteCard({
         </button>
       </div>
       <div className="mt-2 flex items-center justify-between gap-2">
-        <FlameRating value={quote.myPoints} isOverBudget={exceedsBudget} onSelect={onVote} />
+        <StarRating value={quote.myPoints} isOverBudget={exceedsBudget} onSelect={onVote} />
         <span className="text-sm text-muted">
           <span className="font-semibold text-foreground">{quote.pointTotal}</span>점 · {quote.voteCount}명
         </span>

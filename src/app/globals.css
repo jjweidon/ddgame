@@ -15,6 +15,7 @@
   --color-accent-hover: var(--token-accent-hover);
   --color-success: var(--token-success);
   --color-danger: var(--token-danger);
+  --color-warning: var(--token-warning);
   --color-win: var(--token-win);
   --color-lose: var(--token-lose);
   --color-focus: var(--token-focus);

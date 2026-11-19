@@ -1,7 +1,6 @@
 import InsungVote from '@/models/InsungVote';
 import { PlayerCode } from '@/models/Game';
 import {
-  INSUNG_POINT_CARRY_OVER_MAX,
   INSUNG_POINT_MONTHLY_GRANT,
   INSUNG_POINT_START_MONTH
 } from '@/constants/insungPoints';
@@ -26,7 +25,7 @@ const nextMonth = (month: string) => {
 /**
  * 이번 달 포인트 예산. 잔액은 저장하지 않고 시작 월부터 투표 기록으로 계산한다.
  * 포인트제 이전 투표(month 없음)는 1포인트로 시작 월에 쓴 것으로 친다.
- * 지난 투표를 취소하면 그 달 사용량이 줄어 이월(상한 있음)로 돌아온다.
+ * 지난 투표를 취소하면 그 달 사용량이 줄어 이월로 돌아온다.
  */
 export async function getPointBudget(player: PlayerCode): Promise<PointBudget> {
   const currentMonth = getKstMonth();
@@ -46,7 +45,8 @@ export async function getPointBudget(player: PlayerCode): Promise<PointBudget> {
     if (month >= currentMonth) {
       return { month: currentMonth, granted: INSUNG_POINT_MONTHLY_GRANT, carriedOver, spent, remaining };
     }
-    carriedOver = Math.min(INSUNG_POINT_CARRY_OVER_MAX, Math.max(remaining, 0));
+    // 남은 포인트는 전부 이월. 음수 잔액은 다음 달로 넘기지 않는다
+    carriedOver = Math.max(remaining, 0);
     month = nextMonth(month);
   }
 }

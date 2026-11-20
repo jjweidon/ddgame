@@ -22,7 +22,7 @@ export const dynamic = 'force-dynamic';
 const DEFAULT_LIMIT = 30;
 const MAX_LIMIT = 100;
 
-// 제보 목록: ?author=&sort=latest|top&voted=me&limit=&offset=
+// 제보 목록: ?author=&sort=latest|top&voted=me|<이름코드>&limit=&offset=
 export async function GET(request: Request) {
   try {
     await dbConnect();
@@ -35,12 +35,17 @@ export async function GET(request: Request) {
     if (author && !isValidPlayer(author)) return jsonError('유효하지 않은 주인공입니다.', 400);
 
     const me = await getSessionPlayer();
-    const filter: Record<string, unknown> = author ? { author } : {};
-    // ?voted=me: 내가 투표한 제보만
-    if (searchParams.get('voted') === 'me') {
-      if (!me) return jsonError('로그인이 필요합니다.', 401, { requiresLogin: true });
-      filter._id = { $in: await InsungVote.distinct('quoteId', { voter: me }) };
+
+    // ?voted=: 그 사람이 투표한 제보 (투표 이력)
+    const voted = searchParams.get('voted');
+    if (voted) {
+      if (voted === 'me' && !me) return jsonError('로그인이 필요합니다.', 401, { requiresLogin: true });
+      const voter = voted === 'me' ? me : voted;
+      if (!isValidPlayer(voter)) return jsonError('유효하지 않은 이름입니다.', 400);
+      return NextResponse.json({ success: true, data: await votedQuotes(voter, me, sort, offset, limit) });
     }
+
+    const filter: Record<string, unknown> = author ? { author } : {};
     const sortSpec: Record<string, 1 | -1> =
       sort === 'top' ? { score: -1, createdAt: 1 } : { createdAt: -1 };
 
@@ -63,6 +68,32 @@ export async function GET(request: Request) {
     console.error('인성 제보 조회 오류:', error);
     return jsonError(error.message || '제보 조회 중 오류가 발생했습니다.', 500);
   }
+}
+
+/**
+ * 한 사람이 투표한 제보. top은 준 점수순, latest는 투표한 순 (동점이면 최근 투표가 위).
+ * 5명이 쓰는 앱이라 그 사람의 투표를 전부 읽어 정렬한 뒤 페이지만큼 제보를 불러온다.
+ */
+async function votedQuotes(voter: PlayerCode, me: PlayerCode | null, sort: 'top' | 'latest', offset: number, limit: number) {
+  const votes = await InsungVote.find({ voter }).select({ quoteId: 1, points: 1, createdAt: 1 }).lean();
+  const rows = votes.map((vote) => ({
+    quoteId: String(vote.quoteId),
+    points: vote.points ?? 1,
+    votedAt: new Date(vote.createdAt).getTime()
+  }));
+  rows.sort((a, b) => (sort === 'top' && b.points !== a.points ? b.points - a.points : b.votedAt - a.votedAt));
+
+  const page = rows.slice(offset, offset + limit);
+  const found = await InsungQuote.find({ _id: { $in: page.map((row) => row.quoteId) } }).lean<IInsungQuote[]>();
+  const byId = new Map(found.map((quote) => [String(quote._id), quote]));
+  const ordered = page.map((row) => byId.get(row.quoteId)).filter((quote): quote is IInsungQuote => Boolean(quote));
+  const pointsById = new Map(page.map((row) => [row.quoteId, row.points]));
+
+  return {
+    quotes: (await withVoters(ordered, me)).map((quote) => ({ ...quote, voterPoints: pointsById.get(quote._id) ?? 0 })),
+    total: rows.length,
+    hasMore: offset + page.length < rows.length
+  };
 }
 
 type MergeResult = { status: 'merged' | 'duplicate'; quoteId: string };

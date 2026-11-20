@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { getPlayerDisplayName } from '@/utils/playerNames';
 import Icon from '@/components/Icon';
+import LoginModal from '@/components/LoginModal';
 import { INSUNG_POINT_MAX, INSUNG_POINT_MIN } from '@/constants/insungPoints';
 
 type PlayerCode = '잡' | '큐' | '지' | '머' | '웅';
@@ -26,7 +27,9 @@ type Quote = {
   createdAt: string;
   voters: Array<{ player: PlayerCode; points: number }>;
   myPoints: number; // 0이면 투표 안 함
+  voterPoints?: number; // 투표 이력 탭: 선택한 사람이 준 점수
 };
+
 
 type QuoteEditFields = { content: string; author: PlayerCode; context: string; saidAt: string };
 
@@ -61,6 +64,9 @@ export default function InsungPage() {
   const [tab, setTab] = useState<Tab>('ranking');
   const [authorFilter, setAuthorFilter] = useState<PlayerCode | null>(null);
   const [feedSort, setFeedSort] = useState<FeedSort>('top');
+  // 투표 이력 탭에서 고른 사람. null이면 나
+  const [historyPick, setHistoryPick] = useState<PlayerCode | null>(null);
+  const [voterBudget, setVoterBudget] = useState<PointBudget | null>(null);
 
   const [leaderboard, setLeaderboard] = useState<LeaderboardRow[] | null>(null);
   const [quotes, setQuotes] = useState<Quote[]>([]);
@@ -78,6 +84,7 @@ export default function InsungPage() {
   const [message, setMessage] = useState<{ type: 'error' | 'success'; text: string } | null>(null);
 
   const me = auth?.me ?? null;
+  const historyVoter = historyPick ?? me;
 
   const showError = (text?: string) => setMessage({ type: 'error', text: text || '오류가 발생했습니다.' });
   const showSuccess = (text: string) => setMessage({ type: 'success', text });
@@ -105,7 +112,7 @@ export default function InsungPage() {
         params.set('author', authorFilter);
         params.set('sort', feedSort);
       } else if (tab === 'voted') {
-        params.set('voted', 'me');
+        params.set('voted', historyVoter ?? 'me');
         params.set('sort', feedSort);
       } else {
         params.set('sort', tab === 'top' ? 'top' : 'latest');
@@ -114,13 +121,13 @@ export default function InsungPage() {
       params.set('offset', String(offset));
       return `/api/insung/quotes?${params.toString()}`;
     },
-    [authorFilter, feedSort, tab]
+    [authorFilter, feedSort, tab, historyVoter]
   );
 
   const fetchQuotes = useCallback(
     async (append = false) => {
-      // 내 투표 탭은 로그인해야 볼 수 있음
-      if (tab === 'voted' && !authorFilter && !me) {
+      // 투표 이력 탭은 사람을 고르거나 로그인해야 볼 수 있음
+      if (tab === 'voted' && !authorFilter && !historyVoter) {
         setQuotes([]);
         setHasMore(false);
         return;
@@ -133,7 +140,7 @@ export default function InsungPage() {
       setQuotes((prev) => (append ? [...prev, ...loaded] : loaded));
       setHasMore(tab === 'top' && !authorFilter ? false : result.data.hasMore);
     },
-    [feedQuery, quotes.length, tab, authorFilter, me]
+    [feedQuery, quotes.length, tab, authorFilter, historyVoter]
   );
 
   const refreshAll = useCallback(async () => {
@@ -150,9 +157,22 @@ export default function InsungPage() {
     fetchBudget();
   }, [fetchAuth, fetchLeaderboard, fetchBudget]);
 
+  // 로그인·로그아웃하면 내 투표 상태(myPoints)가 바뀌므로 목록을 다시 부름
   useEffect(() => {
     if (tab !== 'ranking' || authorFilter) fetchQuotes();
-  }, [tab, authorFilter, feedSort]);
+  }, [tab, authorFilter, feedSort, historyVoter, me]);
+
+  // 투표 이력 탭: 고른 사람의 이번 달 포인트 (나는 상단 budget을 그대로 씀)
+  useEffect(() => {
+    if (tab !== 'voted' || !historyVoter || historyVoter === me) return setVoterBudget(null);
+    let cancelled = false;
+    api<PointBudget>(`/api/insung/budget?player=${encodeURIComponent(historyVoter)}`).then((result) => {
+      if (!cancelled && result.ok && result.data) setVoterBudget(result.data);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [tab, historyVoter, me]);
 
   const requireLogin = () => {
     if (me) return true;
@@ -294,23 +314,28 @@ export default function InsungPage() {
     await api('/api/insung/auth/logout', { method: 'POST' });
     await fetchAuth();
     setBudget(null);
-    if (tab !== 'ranking' || authorFilter) fetchQuotes();
   };
 
   const handleLoggedIn = async () => {
     setLoginOpen(false);
     await fetchAuth();
     fetchBudget();
-    if (tab !== 'ranking' || authorFilter) fetchQuotes();
   };
 
-  // 사람별 모음·내 투표는 포인트순이 기본
+  // 사람별 모음·투표 이력은 포인트순이 기본. 투표 이력은 나부터 보여줌
   const selectTab = (next: Tab) => {
     // 투표는 랭킹을 다시 부르지 않으므로 랭킹 탭으로 올 때 갱신
     if (next === 'ranking') fetchLeaderboard();
     setAuthorFilter(null);
     setFeedSort('top');
+    setHistoryPick(null);
     setTab(next);
+  };
+
+  const pickHistoryVoter = (player: PlayerCode) => {
+    if (player === historyVoter) return;
+    setQuotes([]);
+    setHistoryPick(player);
   };
 
   const openAuthor = (player: PlayerCode) => {
@@ -320,6 +345,8 @@ export default function InsungPage() {
 
   const showFeed = tab !== 'ranking' || authorFilter !== null;
   const remaining = budget?.remaining ?? INSUNG_POINT_MAX;
+  const showHistory = tab === 'voted' && !authorFilter;
+  const historyBudget = historyVoter && historyVoter === me ? budget : voterBudget;
 
   return (
     <main className="min-h-screen bg-page py-8 px-4 sm:px-6">
@@ -485,7 +512,7 @@ export default function InsungPage() {
                 ['ranking', '랭킹'],
                 ['top', 'TOP10'],
                 ['latest', '최신'],
-                ['voted', '내 투표']
+                ['voted', '투표 이력']
               ] as Array<[Tab, string]>
             ).map(([key, label]) => (
               <button
@@ -503,16 +530,51 @@ export default function InsungPage() {
             ))}
           </div>
 
-          {(authorFilter || (tab === 'voted' && me)) && (
+          {showHistory && (
+            <div className="mb-4 space-y-3">
+              <div className="flex flex-wrap gap-1.5">
+                {PLAYERS.map((player) => (
+                  <button
+                    key={player}
+                    type="button"
+                    onClick={() => pickHistoryVoter(player)}
+                    className={`px-2.5 py-1 rounded-md text-sm border transition-colors ${
+                      historyVoter === player
+                        ? 'border-accent text-accent font-semibold'
+                        : 'border-border text-foreground hover:bg-surface-hover'
+                    }`}
+                  >
+                    {getPlayerDisplayName(player)}
+                    {player === me && <span className="text-xs text-muted ml-0.5">(나)</span>}
+                  </button>
+                ))}
+              </div>
+              {historyVoter && historyBudget && (
+                <p className="text-sm text-muted inline-flex items-center gap-1.5">
+                  남은 포인트
+                  <Icon name="star" filled className="w-4 h-4 text-warning" />
+                  <span className="font-semibold text-accent">{historyBudget.remaining}</span>
+                  <span>/ {historyBudget.granted + historyBudget.carriedOver}</span>
+                  {historyBudget.carriedOver > 0 && <span className="text-xs">(+{historyBudget.carriedOver} 이월)</span>}
+                </p>
+              )}
+            </div>
+          )}
+
+          {(authorFilter || (showHistory && historyVoter)) && (
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-lg font-semibold text-foreground">
-                {authorFilter ? `${getPlayerDisplayName(authorFilter)}의 인성질 모음` : '내가 투표한 제보'}
+                {authorFilter
+                  ? `${getPlayerDisplayName(authorFilter)}의 인성질 모음`
+                  : historyVoter === me
+                    ? '내가 투표한 제보'
+                    : `${getPlayerDisplayName(historyVoter as PlayerCode)}이(가) 투표한 제보`}
               </h2>
               <div className="flex gap-1 text-xs">
                 {(
                   [
-                    ['top', '포인트순'],
-                    ['latest', '최신순']
+                    ['top', showHistory ? '준 점수순' : '포인트순'],
+                    ['latest', showHistory ? '최근 투표순' : '최신순']
                   ] as Array<[FeedSort, string]>
                 ).map(([key, label]) => (
                   <button
@@ -558,19 +620,19 @@ export default function InsungPage() {
             )
           ) : (
             <div className="space-y-3">
-              {tab === 'voted' && !authorFilter && !me ? (
+              {showHistory && !historyVoter ? (
                 <p className="text-sm text-muted">
-                  내가 투표한 제보를 보려면{' '}
+                  볼 사람을 고르거나,{' '}
                   <button type="button" onClick={() => setLoginOpen(true)} className="text-accent underline">
                     로그인
                   </button>
-                  하세요.
+                  해서 내 투표를 보세요.
                 </p>
               ) : (
                 quotes.length === 0 &&
                 !quotesLoading && (
                   <p className="text-sm text-muted">
-                    {tab === 'voted' && !authorFilter ? '아직 투표한 제보가 없습니다.' : '아직 등록된 제보가 없습니다.'}
+                    {showHistory ? '아직 투표한 제보가 없습니다.' : '아직 등록된 제보가 없습니다.'}
                   </p>
                 )
               )}
@@ -581,6 +643,11 @@ export default function InsungPage() {
                   remaining={remaining}
                   rankLabel={tab === 'top' && !authorFilter ? `${index + 1}` : undefined}
                   isMine={me !== null && me === quote.registrant}
+                  voterBadge={
+                    showHistory && historyVoter && quote.voterPoints
+                      ? { name: historyVoter === me ? '내가' : `${getPlayerDisplayName(historyVoter)}이(가)`, points: quote.voterPoints }
+                      : undefined
+                  }
                   onVote={(selected) => handleVote(quote, selected)}
                   onEdit={(fields) => handleEdit(quote, fields)}
                   onDelete={() => handleDelete(quote)}
@@ -651,6 +718,7 @@ function QuoteCard({
   remaining,
   rankLabel,
   isMine,
+  voterBadge,
   onVote,
   onEdit,
   onDelete
@@ -659,6 +727,7 @@ function QuoteCard({
   remaining: number;
   rankLabel?: string;
   isMine: boolean;
+  voterBadge?: { name: string; points: number };
   onVote: (points: number) => void;
   onEdit: (fields: QuoteEditFields) => Promise<boolean>;
   onDelete: () => void;
@@ -762,6 +831,13 @@ function QuoteCard({
       <div className="flex items-start gap-3">
         {rankLabel && <span className="text-lg font-bold text-accent w-6 shrink-0">{rankLabel}</span>}
         <div className="flex-1 min-w-0">
+          {voterBadge && (
+            <p className="text-xs text-muted mb-1 inline-flex items-center gap-1">
+              {voterBadge.name} 준 점수
+              <Icon name="star" filled className="w-3.5 h-3.5 text-warning" />
+              <span className="font-semibold text-foreground">{voterBadge.points}</span>
+            </p>
+          )}
           <p className="text-foreground whitespace-pre-wrap break-words">{quote.content}</p>
           <p className="text-sm font-semibold text-foreground mt-2">— {getPlayerDisplayName(quote.author)}</p>
           {quote.context && <p className="text-xs text-muted mt-1">상황: {quote.context}</p>}
@@ -797,151 +873,6 @@ function QuoteCard({
           <span className="font-semibold text-foreground">{quote.pointTotal}</span>점 · {quote.voteCount}명
         </span>
       </div>
-    </div>
-  );
-}
-
-function LoginModal({
-  players,
-  onClose,
-  onLoggedIn,
-  onReset
-}: {
-  players: AuthStatus['players'];
-  onClose: () => void;
-  onLoggedIn: () => void;
-  onReset: () => void;
-}) {
-  const [player, setPlayer] = useState<PlayerCode | null>(null);
-  const [pin, setPin] = useState('');
-  const [pinConfirm, setPinConfirm] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-
-  const hasPin = player ? players.find((p) => p.player === player)?.hasPin ?? false : false;
-  const isSetup = player !== null && !hasPin;
-
-  const selectPlayer = (next: PlayerCode) => {
-    setPlayer(next);
-    setPin('');
-    setPinConfirm('');
-    setError(null);
-    setNotice(null);
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!player) return;
-    setError(null);
-    if (!/^\d{4}$/.test(pin)) return setError('PIN은 숫자 4자리여야 합니다.');
-    if (isSetup && pin !== pinConfirm) return setError('PIN 확인이 일치하지 않습니다.');
-
-    setLoading(true);
-    const result = await api(`/api/insung/auth/${isSetup ? 'setup' : 'login'}`, {
-      method: 'POST',
-      body: JSON.stringify({ player, pin })
-    });
-    setLoading(false);
-    if (!result.ok) {
-      setPin('');
-      return setError(result.error || '로그인에 실패했습니다.');
-    }
-    onLoggedIn();
-  };
-
-  const handleReset = async () => {
-    if (!player) return;
-    const adminPassword = window.prompt(`${getPlayerDisplayName(player)}의 PIN을 리셋합니다. 관리자 비밀번호를 입력하세요.`);
-    if (!adminPassword) return;
-    const result = await api('/api/insung/auth/reset', {
-      method: 'POST',
-      body: JSON.stringify({ player, adminPassword })
-    });
-    if (!result.ok) return setError(result.error || 'PIN 리셋에 실패했습니다.');
-    setNotice('PIN이 리셋되었습니다. 새 PIN을 설정하세요.');
-    setError(null);
-    onReset();
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4" onClick={onClose}>
-      <form
-        onSubmit={handleSubmit}
-        onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-sm bg-surface rounded-lg border border-border p-5 space-y-4"
-      >
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-foreground">누구세요?</h2>
-          <button type="button" onClick={onClose} className="text-muted hover:text-foreground" aria-label="닫기">
-            <Icon name="close" className="w-5 h-5" />
-          </button>
-        </div>
-
-        <div className="grid grid-cols-5 gap-2">
-          {players.map(({ player: code }) => (
-            <button
-              key={code}
-              type="button"
-              onClick={() => selectPlayer(code)}
-              className={`py-2 rounded-lg text-sm font-semibold border ${
-                player === code
-                  ? 'bg-accent-gradient text-white border-transparent'
-                  : 'border-border text-foreground hover:bg-surface-hover'
-              }`}
-            >
-              {getPlayerDisplayName(code)}
-            </button>
-          ))}
-        </div>
-
-        {player && (
-          <>
-            <p className="text-sm text-muted">
-              {isSetup
-                ? '처음 접속했어요. 앞으로 사용할 PIN(숫자 4자리)을 설정하세요.'
-                : 'PIN 4자리를 입력하세요.'}
-            </p>
-            <input
-              type="password"
-              inputMode="numeric"
-              autoComplete={isSetup ? 'new-password' : 'current-password'}
-              maxLength={4}
-              value={pin}
-              onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
-              placeholder="PIN"
-              autoFocus
-              className="w-full rounded-lg border border-border bg-page px-3 py-2 text-center tracking-[0.5em] text-foreground focus:outline-none focus:ring-2 focus:ring-focus"
-            />
-            {isSetup && (
-              <input
-                type="password"
-                inputMode="numeric"
-                autoComplete="new-password"
-                maxLength={4}
-                value={pinConfirm}
-                onChange={(e) => setPinConfirm(e.target.value.replace(/\D/g, ''))}
-                placeholder="PIN 확인"
-                className="w-full rounded-lg border border-border bg-page px-3 py-2 text-center tracking-[0.5em] text-foreground focus:outline-none focus:ring-2 focus:ring-focus"
-              />
-            )}
-            {notice && <p className="text-sm text-success">{notice}</p>}
-            {error && <p className="text-sm text-danger">{error}</p>}
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-accent-gradient text-white font-semibold py-2.5 rounded-lg disabled:opacity-50"
-            >
-              {loading ? '확인 중...' : isSetup ? 'PIN 설정하고 시작' : '로그인'}
-            </button>
-            {!isSetup && (
-              <button type="button" onClick={handleReset} className="w-full text-xs text-muted hover:text-accent">
-                PIN을 잊었어요 (관리자 리셋)
-              </button>
-            )}
-          </>
-        )}
-      </form>
     </div>
   );
 }

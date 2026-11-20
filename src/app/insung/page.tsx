@@ -562,18 +562,14 @@ export default function InsungPage() {
           )}
 
           {(authorFilter || (showHistory && historyVoter)) && (
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-lg font-semibold text-foreground">
-                {authorFilter
-                  ? `${getPlayerDisplayName(authorFilter)}의 인성질 모음`
-                  : historyVoter === me
-                    ? '내가 투표한 제보'
-                    : `${getPlayerDisplayName(historyVoter as PlayerCode)}이(가) 투표한 제보`}
-              </h2>
+            <div className={`flex items-center mb-3 ${authorFilter ? 'justify-between' : 'justify-end'}`}>
+              {authorFilter && (
+                <h2 className="text-lg font-semibold text-foreground">{getPlayerDisplayName(authorFilter)}의 인성질 모음</h2>
+              )}
               <div className="flex gap-1 text-xs">
                 {(
                   [
-                    ['top', showHistory ? '준 점수순' : '포인트순'],
+                    ['top', showHistory ? '사용 포인트순' : '포인트순'],
                     ['latest', showHistory ? '최근 투표순' : '최신순']
                   ] as Array<[FeedSort, string]>
                 ).map(([key, label]) => (
